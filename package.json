@@ -12,7 +12,7 @@
     "typescript": "^3.3.3333"
   },
   "name": "@viatsyshyn/ts-entity",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "TypeScript Entity Service",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
