@@ -2,15 +2,8 @@
   "compileOnSave": true,
   "compilerOptions": {
     "target": "es5",
-    "lib": [
-      "es6",
-      "dom"
-    ],
-    "types": [
-      "pg",
-      "inversify",
-      "reflect-metadata",
-    ],
+    "lib": ["es2017", "es7", "es6", "dom"],
+    "declaration": true,
     "module": "commonjs",
     "moduleResolution": "node",
     "isolatedModules": false,
@@ -20,10 +13,10 @@
     "preserveConstEnums": true,
     "suppressImplicitAnyIndexErrors": true,
     "strictNullChecks": true,
-    "outDir": "build",
-    "rootDir": ".."
+    "outDir": "dist"
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist"
   ]
 }
