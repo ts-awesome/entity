@@ -1,0 +1,25 @@
+{
+  "dependencies": {
+    "@viatsyshyn/ts-orm": "~0.1.1",
+    "inversify": "^5.0.1",
+    "pg": "^7.8.0",
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/inversify": "^2.0.33",
+    "@types/pg": "^7.4.11",
+    "@types/reflect-metadata": "^0.1.0",
+    "typescript": "^3.3.3333"
+  },
+  "name": "@viatsyshyn/ts-entity",
+  "version": "0.1.0",
+  "description": "TypeScript Entity Service",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Volodymyr Iatsyshyn <viatsyshyn@gmail.com>",
+  "license": "ISC",
+  "scripts": {
+    "build": "tsc && cp src/*.d.ts dist/src/",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
