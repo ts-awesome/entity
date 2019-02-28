@@ -1,5 +1,4 @@
 export default {
-  GlobalErrorHandler: Symbol(),
   ISqlDataDriver: Symbol(),
   UnitOfWork: Symbol(),
   QueryExecutorProvider: Symbol(),

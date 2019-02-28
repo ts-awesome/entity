@@ -139,12 +139,12 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
         let field = this.tableInfo.fields.get(key);
         return field && !field.isPrimaryKey && !field.relatedTo && !field.readonly && !field.autoIncrement; 
       })
-      .reduce((p: any, c: string) => { p[c] = _[c]; }, {});
+      .reduce((p: any, c: string) => { p[c] = _[c]; return p; }, {});
   }
 
   private getPk(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
     return Object.keys(_)
       .filter(key => this.tableInfo.fields.has(key) && this.tableInfo.fields.get(key)!.isPrimaryKey)
-      .reduce((p: any, c: string) => { p[c] = _[c]; }, {});
+      .reduce((p: any, c: string) => { p[c] = _[c]; return p; }, {});
   }
 }

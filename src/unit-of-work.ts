@@ -11,13 +11,13 @@ import Symbols from './symbols';
 
 @injectable()
 export class UnitOfWork<TQuery> implements IUnitOfWork, IQueryExecutorProvider<TQuery> {
-  private currentTransaction: ISqlTransaction | null;
+  private currentTransaction: ISqlTransaction<TQuery> | null;
 
   _ID = Date.now();
 
   constructor(
     @inject(Symbols.ISqlDataDriver)
-    private sqlDataDriver: ISqlDataDriver
+    private sqlDataDriver: ISqlDataDriver<TQuery>
   ) {
   }
 
