@@ -14,7 +14,7 @@ import {
   Upsert,
   WhereBuilder,
   IBuildableQueryCompiler,
-  ITableInfo,
+  ITableInfo
 } from '@viatsyshyn/ts-orm';
 
 const MAX_INSERT_QUERY_LENGTH = 100;
@@ -48,11 +48,11 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async upsertOne(_: Optional<InstanceType<T>>): Promise<InstanceType<T>> {
+  public async upsertOne(_: Optional<InstanceType<T>>, conflictFields: string[]): Promise<InstanceType<T>> {
     const values = this.getValues(_);
     const pk = this.getPk(_);
 
-    const upsert = Upsert(this.Model).values(values).where(pk);
+    const upsert = Upsert(this.Model).values(values).where(pk).conflict(conflictFields);
     const query = this.compiler.compile(upsert);
     const result = await this.executor.getExecutor().execute(query);
     return this.reader.readOne(result) as InstanceType<T>;
