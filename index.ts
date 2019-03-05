@@ -4,5 +4,4 @@ export * from './src/unit-of-work';
 export * from './src/interfaces';
 
 import EntitySymbols from './src/symbols';
-export const Symbols = {...EntitySymbols};
-
+export const Symbols = EntitySymbols;
