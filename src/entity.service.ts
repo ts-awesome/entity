@@ -68,6 +68,16 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
+  update(_: Optional<InstanceType<T>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  update(_: Optional<InstanceType<T>>, condition: Optional<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  public async update(_: Optional<InstanceType<T>>, condition: any): Promise<InstanceType<T>[]> {
+    const values = this.getValues(_);
+    const update = Update(this.Model).values(values).where(condition);
+    const query = this.compiler.compile(update);
+    const result = await this.executor.getExecutor().execute(query);
+    return this.reader.readMany(result) as InstanceType<T>[];
+  }
+
   public async deleteOne(_: InstanceType<T>): Promise<InstanceType<T> | undefined> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(pk).limit(1);
