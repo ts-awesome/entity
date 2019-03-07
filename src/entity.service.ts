@@ -43,14 +43,15 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   }
 
   public async addOne(_: InstanceType<T>): Promise<InstanceType<T>> {
-    const insert = Insert(this.Model).values(_);
+    const values = this.getValuesForInsert(_);
+    const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
     const result = await this.executor.getExecutor().execute(query);
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
   public async upsertOne(_: Optional<InstanceType<T>>, conflictFields: Column<T>[]): Promise<InstanceType<T>> {
-    const values = this.getValues(_);
+    const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
     const upsert = Upsert(this.Model).values(values).where(pk).conflict(conflictFields);
@@ -60,7 +61,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   }
 
   public async updateOne(_: Optional<InstanceType<T>>): Promise<InstanceType<T>> {
-    const values = this.getValues(_);
+    const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(pk);
     const query = this.compiler.compile(update);
@@ -71,7 +72,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   update(_: Optional<InstanceType<T>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
   update(_: Optional<InstanceType<T>>, condition: Optional<InstanceType<T>>): Promise<InstanceType<T>[]>;
   public async update(_: Optional<InstanceType<T>>, condition: any): Promise<InstanceType<T>[]> {
-    const values = this.getValues(_);
+    const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(condition);
     const query = this.compiler.compile(update);
     const result = await this.executor.getExecutor().execute(query);
@@ -143,7 +144,17 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return activeSelect;
   }
 
-  private getValues(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+  private getValuesForInsert(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+    return Object
+      .keys(_)
+      .filter(key => {
+        let field = this.tableInfo.fields.get(key);
+        return field && !field.relatedTo && !field.readonly && !field.autoIncrement; 
+      })
+      .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
+  }
+
+  private getValuesForUpdate(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
     return Object
       .keys(_)
       .filter(key => {
