@@ -1,7 +1,5 @@
 {
   "dependencies": {
-    "@viatsyshyn/ts-orm": "~0.1.5",
-    "inversify": "^5.0.1",
     "pg": "^7.8.0",
     "reflect-metadata": "^0.1.13"
   },
@@ -9,7 +7,13 @@
     "@types/inversify": "^2.0.33",
     "@types/pg": "^7.4.11",
     "@types/reflect-metadata": "^0.1.0",
-    "typescript": "^3.3.3333"
+    "typescript": "^3.3.3333",
+    "inversify": "^5.0.1",
+    "@viatsyshyn/ts-orm": "~0.1.6"
+  },
+  "peerDependencies": {
+    "@viatsyshyn/ts-orm": "~0.1.6",
+    "inversify": "^5.0.1"
   },
   "name": "@viatsyshyn/ts-entity",
   "version": "0.0.0",

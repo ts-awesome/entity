@@ -1,4 +1,4 @@
-import {ISelectBuilder, Optional, TableMetaProvider, WhereBuilder} from '@viatsyshyn/ts-orm';
+import {ISelectBuilder, Optional, TableMetaProvider, WhereBuilder, Column} from '@viatsyshyn/ts-orm';
 
 export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> extends ISelectBuilder<T> {
   fetch<X=T>(): Promise<X[]>;
@@ -10,7 +10,7 @@ export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> ext
 export interface IEntityService<T> {
   add(list: T[]): Promise<T[]>;
   addOne(_: T): Promise<T>;
-  upsertOne(_: Optional<T>, conflictFields: string[]): Promise<T>;
+  upsertOne(_: Optional<T>, conflictFields: Column<T>[]): Promise<T>;
   updateOne(_: Optional<T>): Promise<T>;
   deleteOne(_: T): Promise<T | undefined>;
   getOne(builder: WhereBuilder<T>): Promise<T | undefined>;

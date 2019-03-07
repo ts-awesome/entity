@@ -14,7 +14,8 @@ import {
   Upsert,
   WhereBuilder,
   IBuildableQueryCompiler,
-  ITableInfo
+  ITableInfo,
+  Column
 } from '@viatsyshyn/ts-orm';
 
 const MAX_INSERT_QUERY_LENGTH = 100;
@@ -48,7 +49,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async upsertOne(_: Optional<InstanceType<T>>, conflictFields: string[]): Promise<InstanceType<T>> {
+  public async upsertOne(_: Optional<InstanceType<T>>, conflictFields: Column<T>[]): Promise<InstanceType<T>> {
     const values = this.getValues(_);
     const pk = this.getPk(_);
 
