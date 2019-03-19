@@ -116,7 +116,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   exists(_: Optional<InstanceType<T>>): Promise<boolean>;
   exists(_: WhereBuilder<InstanceType<T>>): Promise<boolean>;
   public async exists(_: any): Promise<boolean> {
-    return this.select().exists();
+    return this.select().where(_).exists();
   }
 
   public select<T extends TableMetaProvider<InstanceType<T>>>(): IActiveSelect<InstanceType<T>> {
