@@ -50,11 +50,11 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async upsertOne(_: Optional<InstanceType<T>>, conflictFields: Column<T>[]): Promise<InstanceType<T>> {
+  public async upsertOne(_: Optional<InstanceType<T>>, uniqueIndex?: string): Promise<InstanceType<T>> {
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
-    const upsert = Upsert(this.Model).values(values).where(pk).conflict(conflictFields);
+    const upsert = Upsert(this.Model).values(values).where(pk).conflict(uniqueIndex);
     const query = this.compiler.compile(upsert);
     const result = await this.executor.getExecutor().execute(query);
     return this.reader.readOne(result) as InstanceType<T>;
