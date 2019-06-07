@@ -145,13 +145,15 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   }
 
   private getValuesForInsert(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
-    return Object
+    const res = Object
       .keys(_)
       .filter(key => {
         let field = this.tableInfo.fields.get(key);
         return field && !field.relatedTo && !field.readonly && !field.autoIncrement; 
       })
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
+    
+    return this.setDefaults(res);
   }
 
   private getValuesForUpdate(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
@@ -168,5 +170,12 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return Object.keys(_)
       .filter(key => this.tableInfo.fields.has(key) && this.tableInfo.fields.get(key)!.isPrimaryKey)
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
+  }
+
+  private setDefaults(_: Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+    this.tableInfo.fields.forEach((fieldInfo, prop) => {
+      _[prop] = _[prop] || fieldInfo.defaults;
+    });
+    return _;
   }
 }

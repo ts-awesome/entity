@@ -9,10 +9,10 @@
     "@types/reflect-metadata": "^0.1.0",
     "typescript": "^3.3.3333",
     "inversify": "^5.0.1",
-    "@viatsyshyn/ts-orm": "~0.1.7"
+    "@viatsyshyn/ts-orm": "~0.1.15"
   },
   "peerDependencies": {
-    "@viatsyshyn/ts-orm": "~0.1.7",
+    "@viatsyshyn/ts-orm": "~0.1.15",
     "inversify": "^5.0.1"
   },
   "name": "@viatsyshyn/ts-entity",
