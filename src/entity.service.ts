@@ -7,7 +7,6 @@ import {
   ICountData,
   IDbDataReader,
   Insert,
-  Optional,
   Select,
   TableMetaProvider,
   Update,
@@ -42,7 +41,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return results;
   }
 
-  public async addOne(_: InstanceType<T>): Promise<InstanceType<T>> {
+  public async addOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T>> {
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
@@ -50,7 +49,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async upsertOne(_: Optional<InstanceType<T>>, uniqueIndex?: string): Promise<InstanceType<T>> {
+  public async upsertOne(_: Partial<InstanceType<T>>, uniqueIndex?: string): Promise<InstanceType<T>> {
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
@@ -60,7 +59,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async updateOne(_: Optional<InstanceType<T>>): Promise<InstanceType<T>> {
+  public async updateOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T>> {
     const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(pk);
@@ -69,9 +68,9 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  update(_: Optional<InstanceType<T>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  update(_: Optional<InstanceType<T>>, condition: Optional<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  public async update(_: Optional<InstanceType<T>>, condition: any): Promise<InstanceType<T>[]> {
+  update(_: Partial<InstanceType<T>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  update(_: Partial<InstanceType<T>>, condition: Partial<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  public async update(_: Partial<InstanceType<T>>, condition: any): Promise<InstanceType<T>[]> {
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(condition);
     const query = this.compiler.compile(update);
@@ -87,7 +86,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result);
   }
 
-  delete(_: Optional<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
+  delete(_: Partial<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
   delete(_: WhereBuilder<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
   public async delete(_: any, limit?: number): Promise<InstanceType<T>[]> {
     const del = Delete(this.Model).where(_).limit(limit!);
@@ -96,24 +95,24 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readMany(result);
   }
 
-  get(_: Optional<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
+  get(_: Partial<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
   get(_: WhereBuilder<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
   public async get(_: any, limit?: number, offset?: number): Promise<InstanceType<T>[]> {
     return this.select().where(_).limit(limit!).offset(offset!).fetch();
   }
 
-  getOne(_: Optional<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
+  getOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
   getOne(_: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
   public async getOne(_: any): Promise<InstanceType<T> | undefined> {
     return this.select().where(_).fetchOne();
   }
 
-  count(_: Optional<InstanceType<T>>): Promise<number>;
+  count(_: Partial<InstanceType<T>>): Promise<number>;
   count(_: WhereBuilder<InstanceType<T>>): Promise<number>
   public async count(_: any): Promise<number> {
     return this.select().where(_).count();
   }
-  exists(_: Optional<InstanceType<T>>): Promise<boolean>;
+  exists(_: Partial<InstanceType<T>>): Promise<boolean>;
   exists(_: WhereBuilder<InstanceType<T>>): Promise<boolean>;
   public async exists(_: any): Promise<boolean> {
     return this.select().where(_).exists();
@@ -144,7 +143,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return activeSelect;
   }
 
-  private getValuesForInsert(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+  private getValuesForInsert(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     const res = Object
       .keys(_)
       .filter(key => {
@@ -156,7 +155,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.setDefaults(res);
   }
 
-  private getValuesForUpdate(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+  private getValuesForUpdate(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     return Object
       .keys(_)
       .filter(key => {
@@ -166,13 +165,13 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private getPk(_: T | Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+  private getPk(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     return Object.keys(_)
       .filter(key => this.tableInfo.fields.has(key) && this.tableInfo.fields.get(key)!.isPrimaryKey)
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private setDefaults(_: Optional<InstanceType<T>>): Optional<InstanceType<T>> {
+  private setDefaults(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
       _[prop] = _[prop] || fieldInfo.defaults;
     });
