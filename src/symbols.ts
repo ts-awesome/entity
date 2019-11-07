@@ -1,8 +1,8 @@
 export default {
-  ISqlDataDriver: Symbol(),
-  UnitOfWork: Symbol(),
-  QueryExecutorProvider: Symbol(),
-  ISqlQueryCompiler: Symbol(),
+  ISqlDataDriver: Symbol.for('ISqlDataDriver'),
+  UnitOfWork: Symbol.for('UnitOfWork'),
+  QueryExecutorProvider: Symbol.for('QueryExecutorProvider'),
+  ISqlQueryCompiler: Symbol.for('ISqlQueryCompiler'),
   serviceFor(Model: Function) {
     return Symbol.for(`IEntityService<${Model.name}>`);
   },
