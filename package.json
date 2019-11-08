@@ -23,7 +23,7 @@
   "author": "Volodymyr Iatsyshyn <viatsyshyn@gmail.com>",
   "license": "ISC",
   "scripts": {
-    "build": "tsc && cp src/*.d.ts dist/src/",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
