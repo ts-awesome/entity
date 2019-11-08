@@ -1,13 +1,17 @@
-export default {
-  ISqlDataDriver: Symbol.for('ISqlDataDriver'),
-  UnitOfWork: Symbol.for('UnitOfWork'),
-  QueryExecutorProvider: Symbol.for('QueryExecutorProvider'),
-  ISqlQueryCompiler: Symbol.for('ISqlQueryCompiler'),
-  serviceFor(Model: Function) {
-    return Symbol.for(`IEntityService<${Model.name}>`);
-  },
+export const ISqlDataDriverSymbol = Symbol.for('ISqlDataDriver');
+export const UnitOfWorkSymbol = Symbol.for('UnitOfWork');
+export const QueryExecutorProviderSymbol = Symbol.for('QueryExecutorProvider');
+export const ISqlQueryCompilerSymbol = Symbol.for('ISqlQueryCompiler');
+export const serviceFor = ({name}: Function) => Symbol.for(`IEntityService<${name}>`);
+export const dbReaderFor = ({name}: Function) => Symbol.for(`IDbDataReader<${name}>`);
 
-  dbReaderFor(Model: Function) {
-    return Symbol.for(`IDbDataReader<${Model.name}>`);
-  },
-}
+export const Symbols = {
+  ISqlDataDriver: ISqlDataDriverSymbol,
+  UnitOfWork: UnitOfWorkSymbol,
+  QueryExecutorProvider: QueryExecutorProviderSymbol,
+  ISqlQueryCompiler: ISqlQueryCompilerSymbol,
+  serviceFor,
+  dbReaderFor,
+};
+
+export default Symbols;
