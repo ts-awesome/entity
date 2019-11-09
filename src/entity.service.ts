@@ -14,15 +14,12 @@ import {
   WhereBuilder,
   IBuildableQueryCompiler,
   ITableInfo,
-  Column
 } from '@viatsyshyn/ts-orm';
-
-const MAX_INSERT_QUERY_LENGTH = 100;
 
 @injectable()
 export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery> implements IEntityService<InstanceType<T>> {
 
-  private tableInfo: ITableInfo;
+  private readonly tableInfo: ITableInfo;
 
   constructor(
     @unmanaged() protected readonly Model: TableMetaProvider<InstanceType<T>>,
@@ -119,8 +116,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
   }
 
   public select<T extends TableMetaProvider<InstanceType<T>>>(): IActiveSelect<InstanceType<T>> {
-
-    let activeSelect: IActiveSelect<InstanceType<T>> = 
+    let activeSelect: IActiveSelect<InstanceType<T>> =
     {
       ...<any>Select(this.Model),
       fetch: async () => {
@@ -139,7 +135,8 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
         return this.reader.readCount(result as ICountData[]);
       },
       exists: async () => (await activeSelect.count()) > 0
-    }
+    };
+
     return activeSelect;
   }
 
@@ -148,11 +145,11 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
       .keys(_)
       .filter(key => {
         let field = this.tableInfo.fields.get(key);
-        return field && !field.relatedTo && !field.readonly && !field.autoIncrement; 
+        return field && !field.relatedTo && !field.readonly && !field.autoIncrement;
       })
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
-    
-    return this.setDefaults(res);
+
+    return this.setDefault(res);
   }
 
   private getValuesForUpdate(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
@@ -160,20 +157,22 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
       .keys(_)
       .filter(key => {
         let field = this.tableInfo.fields.get(key);
-        return field && !field.isPrimaryKey && !field.relatedTo && !field.readonly && !field.autoIncrement; 
+        return field && !field.primaryKey && !field.relatedTo && !field.readonly && !field.autoIncrement;
       })
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
   private getPk(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
-    return Object.keys(_)
-      .filter(key => this.tableInfo.fields.has(key) && this.tableInfo.fields.get(key)!.isPrimaryKey)
+    const {fields} = this.tableInfo;
+    return Object
+      .keys(_)
+      .filter(key => fields.has(key) && fields.get(key)!.primaryKey)
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private setDefaults(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
+  private setDefault(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
-      _[prop] = _[prop] || fieldInfo.defaults;
+      _[prop] = _[prop] ?? fieldInfo.default;
     });
     return _;
   }

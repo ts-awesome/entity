@@ -1,29 +1,26 @@
-import { inject, injectable } from 'inversify';
+import {injectable, unmanaged} from 'inversify';
 
-import { IUnitOfWork, IQueryExecutorProvider } from './interfaces';
-import { IQueryExecutor } from '@viatsyshyn/ts-orm';
-import {
-  ISqlDataDriver,
-  ISqlTransaction
-} from '@viatsyshyn/ts-orm';
+import {IUnitOfWork, IQueryExecutorProvider, Action} from './interfaces';
+import {IQueryDriver, IQueryExecutor, ITransaction} from '@viatsyshyn/ts-orm';
 
-import Symbols from './symbols';
+const TRANSACTION_NOT_STARTED = 'Transaction is not started';
+const TRANSACTION_ALREADY_RESOLVED = 'Transaction is already resolved';
 
 @injectable()
-export class UnitOfWork<TQuery> implements IUnitOfWork, IQueryExecutorProvider<TQuery> {
-  private currentTransaction: ISqlTransaction<TQuery> | null;
+export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
+  private currentTransaction: ITransaction<TQuery> | null;
 
-  _ID = Date.now();
+  public readonly uid = Date.now();
 
   constructor(
-    @inject(Symbols.ISqlDataDriver)
-    private sqlDataDriver: ISqlDataDriver<TQuery>
-  ) {
+    @unmanaged() private queryDriver: IQueryDriver<TQuery>
+  ) {}
+
+  public toString() {
+    return `UnitOfWork[${this.uid}]`;
   }
 
-  public async auto<TData>(
-    action: () => Promise<TData>
-  ): Promise<TData> {
+  public async auto<TData>(action: Action<TData>): Promise<TData> {
     await this.begin();
     try {
       const actionResult = await action();
@@ -35,33 +32,31 @@ export class UnitOfWork<TQuery> implements IUnitOfWork, IQueryExecutorProvider<T
     }
   }
 
-  public async begin(): Promise<void> {
-    if (this.currentTransaction && !this.currentTransaction.finished) {
-      throw new Error('Transaction is finished');
+  public async begin() {
+    if (this.currentTransaction?.finished) {
+      throw new Error(TRANSACTION_ALREADY_RESOLVED);
     }
 
-    this.currentTransaction = await this.sqlDataDriver.begin();
+    this.currentTransaction = await this.queryDriver.begin();
   }
 
-  public async commit(): Promise<void> {
+  public async commit() {
     if (!this.currentTransaction) {
-      throw new Error('Transaction is not started');
+      throw new Error(TRANSACTION_NOT_STARTED);
     }
     await this.currentTransaction.commit();
     this.currentTransaction = null;
   }
 
-  public async rollback(): Promise<void> {
+  public async rollback() {
     if (!this.currentTransaction) {
-      throw new Error('Transaction is not started');
+      throw new Error(TRANSACTION_NOT_STARTED);
     }
     await this.currentTransaction.rollback();
     this.currentTransaction = null;
   }
 
   public getExecutor(): IQueryExecutor<TQuery> {
-    return <any>(this.currentTransaction 
-      ? this.currentTransaction
-      : this.sqlDataDriver);
+    return this.currentTransaction ?? this.queryDriver;
   }
 }

@@ -1,4 +1,4 @@
-import {ISelectBuilder, TableMetaProvider, WhereBuilder, Column} from '@viatsyshyn/ts-orm';
+import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@viatsyshyn/ts-orm';
 
 export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> extends ISelectBuilder<T> {
   fetch<X=T>(): Promise<X[]>;
@@ -30,16 +30,14 @@ export interface IEntityService<T> {
   exists(values: Partial<T>): Promise<boolean>;
 }
 
-import {IQueryExecutor} from '@viatsyshyn/ts-orm';
-
 export interface IQueryExecutorProvider<TQuery> {
   getExecutor(): IQueryExecutor<TQuery>;
 }
 
-export interface IUnitOfWork {
-  auto<TData>(
-    action: () => Promise<TData>
-  ): Promise<TData>;
+export type Action<T> = () => T | Promise<T>;
+
+export interface IUnitOfWork<TQuery> extends IQueryExecutorProvider<TQuery> {
+  auto<TData>(action: Action<TData>): Promise<TData>;
   begin(): Promise<void>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
