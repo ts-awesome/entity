@@ -7,14 +7,17 @@ export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> ext
   exists(): Promise<boolean>;
 }
 
-export interface IEntityService<T> {
-  add(list: T[]): Promise<T[]>;
-  addOne(_: Partial<T>): Promise<T>;
-  upsertOne(_: Partial<T>, uniqueIndex?: string): Promise<T>;
-  update(_: Partial<T>, condition: WhereBuilder<T>): Promise<T[]>;
-  update(_: Partial<T>, condition: Partial<T>): Promise<T[]>;
-  updateOne(_: Partial<T>): Promise<T>;
-  deleteOne(_: T): Promise<T | undefined>;
+export type Insertable<T, ro extends keyof T> = Omit<T, ro>;
+export type Updatable<T, pk extends keyof T, ro extends keyof T> = Pick<T, pk> & Partial<Omit<T, pk | ro>>;
+
+export interface IEntityService<T, pk extends keyof T, ro extends keyof T> {
+  add(list: Insertable<T, ro>[]): Promise<T[]>;
+  addOne(_: Insertable<T, ro>): Promise<T>;
+  upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<T[]>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<T[]>;
+  updateOne(_: Updatable<T, pk, ro>): Promise<T>;
+  deleteOne(_: Pick<T, pk>): Promise<T | undefined>;
   getOne(builder: WhereBuilder<T>): Promise<T | undefined>;
   getOne(values: Partial<T>): Promise<T | undefined>;
   get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<T[]>;

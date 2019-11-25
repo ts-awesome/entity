@@ -1,5 +1,5 @@
 import { injectable, unmanaged } from 'inversify';
-import { IEntityService, IQueryExecutorProvider, IActiveSelect } from './interfaces';
+import {IEntityService, IQueryExecutorProvider, IActiveSelect, Insertable, Updatable} from './interfaces';
 
 import {
   count,
@@ -17,7 +17,7 @@ import {
 } from '@viatsyshyn/ts-orm';
 
 @injectable()
-export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery> implements IEntityService<InstanceType<T>> {
+export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery, pk extends keyof T, ro extends keyof T> implements IEntityService<InstanceType<T>, pk, ro> {
 
   private readonly tableInfo: ITableInfo;
 
@@ -30,7 +30,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     this.tableInfo = (<any>Model.prototype).tableInfo;
   }
 
-  public async add(_: InstanceType<T>[]): Promise<InstanceType<T>[]> {
+  public async add(_: Insertable<InstanceType<T>, ro>[]): Promise<InstanceType<T>[]> {
     const results = [];
     for(let i = 0; i < _.length; i++){
       results.push(await this.addOne(_[i]));
@@ -38,7 +38,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return results;
   }
 
-  public async addOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T>> {
+  public async addOne(_: Insertable<InstanceType<T>, ro>): Promise<InstanceType<T>> {
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
@@ -46,7 +46,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async upsertOne(_: Partial<InstanceType<T>>, uniqueIndex?: string): Promise<InstanceType<T>> {
+  public async upsertOne(_: Insertable<InstanceType<T>, ro>, uniqueIndex?: string): Promise<InstanceType<T>> {
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
@@ -56,7 +56,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  public async updateOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T>> {
+  public async updateOne(_: Updatable<InstanceType<T>, pk, ro>): Promise<InstanceType<T>> {
     const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(pk);
@@ -65,9 +65,9 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readOne(result) as InstanceType<T>;
   }
 
-  update(_: Partial<InstanceType<T>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  update(_: Partial<InstanceType<T>>, condition: Partial<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  public async update(_: Partial<InstanceType<T>>, condition: any): Promise<InstanceType<T>[]> {
+  update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: Partial<InstanceType<T>>): Promise<InstanceType<T>[]>;
+  public async update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: any): Promise<InstanceType<T>[]> {
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(condition);
     const query = this.compiler.compile(update);
@@ -75,7 +75,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.reader.readMany(result) as InstanceType<T>[];
   }
 
-  public async deleteOne(_: InstanceType<T>): Promise<InstanceType<T> | undefined> {
+  public async deleteOne(_: Pick<InstanceType<T>, pk>): Promise<InstanceType<T> | undefined> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(pk).limit(1);
     const query = this.compiler.compile(del);
@@ -140,7 +140,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return activeSelect;
   }
 
-  private getValuesForInsert(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
+  private getValuesForInsert(_: any): Partial<InstanceType<T>> {
     const res = Object
       .keys(_)
       .filter(key => {
@@ -152,7 +152,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
     return this.setDefault(res);
   }
 
-  private getValuesForUpdate(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
+  private getValuesForUpdate(_: any): Partial<InstanceType<T>> {
     return Object
       .keys(_)
       .filter(key => {
@@ -162,7 +162,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery>
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private getPk(_: T | Partial<InstanceType<T>>): Partial<InstanceType<T>> {
+  private getPk(_: any): Partial<InstanceType<T>> {
     const {fields} = this.tableInfo;
     return Object
       .keys(_)
