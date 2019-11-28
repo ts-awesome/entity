@@ -172,7 +172,9 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
 
   private setDefault(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
-      _[prop] = _[prop] ?? fieldInfo.default;
+      if (fieldInfo.default !== undefined) {    
+        _[prop] = _[prop] ?? fieldInfo.default;
+      }
     });
     return _;
   }
