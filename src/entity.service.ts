@@ -16,6 +16,8 @@ import {
   ITableInfo,
 } from '@viatsyshyn/ts-orm';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 @injectable()
 export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery, pk extends keyof T, ro extends keyof T> implements IEntityService<InstanceType<T>, pk, ro> {
 
@@ -27,7 +29,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     @unmanaged() protected readonly compiler: IBuildableQueryCompiler<TQuery>,
     @unmanaged() protected readonly reader: IDbDataReader<InstanceType<T>>,
   ) {
-    this.tableInfo = (<any>Model.prototype).tableInfo;
+    this.tableInfo = (Model.prototype as any).tableInfo;
   }
 
   public async add(_: Insertable<InstanceType<T>, ro>[]): Promise<InstanceType<T>[]> {
@@ -86,7 +88,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
   delete(_: Partial<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
   delete(_: WhereBuilder<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
   public async delete(_: any, limit?: number): Promise<InstanceType<T>[]> {
-    const del = Delete(this.Model).where(_).limit(limit!);
+    const del = Delete(this.Model).where(_).limit(limit as any);
     const query = this.compiler.compile(del);
     const result = await this.executor.getExecutor().execute(query);
     return this.reader.readMany(result);
@@ -95,7 +97,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
   get(_: Partial<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
   get(_: WhereBuilder<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
   public async get(_: any, limit?: number, offset?: number): Promise<InstanceType<T>[]> {
-    return this.select().where(_).limit(limit!).offset(offset!).fetch();
+    return this.select().where(_).limit(limit as any).offset(offset as any).fetch();
   }
 
   getOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
@@ -116,9 +118,10 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
   }
 
   public select<T extends TableMetaProvider<InstanceType<T>>>(): IActiveSelect<InstanceType<T>> {
-    let activeSelect: IActiveSelect<InstanceType<T>> =
+    const activeSelect: IActiveSelect<InstanceType<T>> =
     {
-      ...<any>Select(this.Model),
+      // this is hack :-)
+      ...(Select(this.Model) as any),
       fetch: async () => {
         const query = this.compiler.compile(activeSelect);
         const result = await this.executor.getExecutor().execute(query);
@@ -144,7 +147,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     const res = Object
       .keys(_)
       .filter(key => {
-        let field = this.tableInfo.fields.get(key);
+        const field = this.tableInfo.fields.get(key);
         return field && !field.relatedTo && !field.readonly && !field.autoIncrement;
       })
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
@@ -156,7 +159,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return Object
       .keys(_)
       .filter(key => {
-        let field = this.tableInfo.fields.get(key);
+        const field = this.tableInfo.fields.get(key);
         return field && !field.primaryKey && !field.relatedTo && !field.readonly && !field.autoIncrement;
       })
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
@@ -166,13 +169,13 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     const {fields} = this.tableInfo;
     return Object
       .keys(_)
-      .filter(key => fields.has(key) && fields.get(key)!.primaryKey)
+      .filter(key => fields.has(key) && fields.get(key)?.primaryKey)
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
   private setDefault(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
-      if (fieldInfo.default !== undefined) {    
+      if (fieldInfo.default !== undefined) {
         _[prop] = _[prop] ?? fieldInfo.default;
       }
     });

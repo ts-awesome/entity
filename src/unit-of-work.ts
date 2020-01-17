@@ -1,6 +1,6 @@
 import {injectable, unmanaged} from 'inversify';
 
-import {IUnitOfWork, IQueryExecutorProvider, Action} from './interfaces';
+import {IUnitOfWork, Action} from './interfaces';
 import {IQueryDriver, IQueryExecutor, ITransaction} from '@viatsyshyn/ts-orm';
 
 const TRANSACTION_NOT_STARTED = 'Transaction is not started';
@@ -8,7 +8,7 @@ const TRANSACTION_ALREADY_RESOLVED = 'Transaction is already resolved';
 
 @injectable()
 export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
-  private currentTransaction: ITransaction<TQuery> | null;
+  private currentTransaction: ITransaction<TQuery> | null = null;
 
   public readonly uid = Date.now();
 
@@ -16,7 +16,7 @@ export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
     @unmanaged() private queryDriver: IQueryDriver<TQuery>
   ) {}
 
-  public toString() {
+  public toString(): string {
     return `UnitOfWork[${this.uid}]`;
   }
 
@@ -32,7 +32,7 @@ export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
     }
   }
 
-  public async begin() {
+  public async begin(): Promise<void> {
     if (this.currentTransaction?.finished) {
       throw new Error(TRANSACTION_ALREADY_RESOLVED);
     }
@@ -40,7 +40,7 @@ export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
     this.currentTransaction = await this.queryDriver.begin();
   }
 
-  public async commit() {
+  public async commit(): Promise<void> {
     if (!this.currentTransaction) {
       throw new Error(TRANSACTION_NOT_STARTED);
     }
@@ -48,7 +48,7 @@ export class UnitOfWork<TQuery> implements IUnitOfWork<TQuery> {
     this.currentTransaction = null;
   }
 
-  public async rollback() {
+  public async rollback(): Promise<void> {
     if (!this.currentTransaction) {
       throw new Error(TRANSACTION_NOT_STARTED);
     }
