@@ -144,6 +144,14 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
   }
 
   private getValuesForInsert(_: any): Partial<InstanceType<T>> {
+
+    Object.keys(_)
+      .forEach(key => {
+        if (_[key] === undefined) {
+          delete _[key];
+        }
+      });
+
     const res = Object
       .keys(_)
       .filter(key => {
@@ -156,6 +164,13 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
   }
 
   private getValuesForUpdate(_: any): Partial<InstanceType<T>> {
+    Object.keys(_)
+      .forEach(key => {
+        if (_[key] === undefined) {
+          delete _[key];
+        }
+      });
+
     return Object
       .keys(_)
       .filter(key => {
