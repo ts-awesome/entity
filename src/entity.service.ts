@@ -77,12 +77,12 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return this.reader.readMany(result) as InstanceType<T>[];
   }
 
-  public async deleteOne(_: Pick<InstanceType<T>, pk>): Promise<InstanceType<T> | undefined> {
+  public async deleteOne(_: Pick<InstanceType<T>, pk>): Promise<InstanceType<T> | null> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(pk).limit(1);
     const query = this.compiler.compile(del);
     const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result);
+    return this.reader.readOne(result) ?? null;
   }
 
   delete(_: Partial<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
@@ -100,9 +100,9 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return this.select().where(_).limit(limit as any).offset(offset as any).fetch();
   }
 
-  getOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
-  getOne(_: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T> | undefined>;
-  public async getOne(_: any): Promise<InstanceType<T> | undefined> {
+  getOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T> | null>;
+  getOne(_: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T> | null>;
+  public async getOne(_: any): Promise<InstanceType<T> | null> {
     return this.select().where(_).fetchOne();
   }
 
@@ -130,7 +130,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
       fetchOne: async () => {
         const query = this.compiler.compile(activeSelect.limit(1));
         const result = await this.executor.getExecutor().execute(query);
-        return this.reader.readOne(result);
+        return this.reader.readOne(result) ?? null;
       },
       count: async () => {
         const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1));

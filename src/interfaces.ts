@@ -1,9 +1,9 @@
 import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@viatsyshyn/ts-orm';
 
 export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> extends ISelectBuilder<T> {
-  fetch<X=T>(): Promise<X[]>;
+  fetch<X=InstanceType<T>>(): Promise<X[]>;
   count(): Promise<number>;
-  fetchOne<X=T>(): Promise<T | undefined>;
+  fetchOne<X=InstanceType<T>>(): Promise<X | null>;
   exists(): Promise<boolean>;
 }
 
@@ -17,9 +17,9 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T> {
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<T[]>;
   update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<T[]>;
   updateOne(_: Updatable<T, pk, ro>): Promise<T>;
-  deleteOne(_: Pick<T, pk>): Promise<T | undefined>;
-  getOne(builder: WhereBuilder<T>): Promise<T | undefined>;
-  getOne(values: Partial<T>): Promise<T | undefined>;
+  deleteOne(_: Pick<T, pk>): Promise<T | null>;
+  getOne(builder: WhereBuilder<T>): Promise<T | null>;
+  getOne(values: Partial<T>): Promise<T | null>;
   get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<T[]>;
   get(values: Partial<T>, limit?: number, offset?: number): Promise<T[]>;
 
