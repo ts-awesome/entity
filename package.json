@@ -18,13 +18,13 @@
     "@viatsyshyn/ts-orm": "~0.2.0",
     "inversify": "^5.0.0"
   },
-  "name": "@viatsyshyn/ts-entity",
+  "name": "@ts-awesom/entity",
   "version": "0.0.0",
   "description": "TypeScript Entity Service",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "Volodymyr Iatsyshyn <viatsyshyn@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "lint": "eslint \"src/**/*.ts\"",
