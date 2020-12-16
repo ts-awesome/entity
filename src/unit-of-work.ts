@@ -1,7 +1,7 @@
 import {injectable, unmanaged} from 'inversify';
 
 import {IUnitOfWork, Action} from './interfaces';
-import {IQueryDriver, IQueryExecutor, ITransaction} from '@viatsyshyn/ts-orm';
+import {IQueryDriver, IQueryExecutor, ITransaction} from '@ts-awesome/orm';
 
 const TRANSACTION_NOT_STARTED = 'Transaction is not started';
 const TRANSACTION_ALREADY_RESOLVED = 'Transaction is already resolved';

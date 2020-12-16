@@ -1,7 +1,7 @@
 require('reflect-metadata');
 const {EntityService, UnitOfWork} = require('../dist');
-const {TestCompiler, TestDriver} = require('@viatsyshyn/ts-orm-test-driver');
-const { DbReader } = require('@viatsyshyn/ts-orm');
+const {TestCompiler, TestDriver} = require('@ts-awesome/orm-test-driver');
+const { DbReader } = require('@ts-awesome/orm');
 
 class Model {}
 

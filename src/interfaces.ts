@@ -1,4 +1,4 @@
-import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@viatsyshyn/ts-orm';
+import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@ts-awesome/orm';
 
 export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> extends ISelectBuilder<T> {
   fetch<X=InstanceType<T>>(): Promise<X[]>;

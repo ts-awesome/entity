@@ -14,7 +14,7 @@ import {
   WhereBuilder,
   IBuildableQueryCompiler,
   ITableInfo,
-} from '@viatsyshyn/ts-orm';
+} from '@ts-awesome/orm';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
