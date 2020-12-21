@@ -18,7 +18,7 @@
     "@ts-awesome/orm": "^1.0.0",
     "inversify": "^5.0.0"
   },
-  "name": "@ts-awesom/entity",
+  "name": "@ts-awesome/entity",
   "version": "0.0.0",
   "description": "TypeScript Entity Service",
   "main": "dist/index.js",
