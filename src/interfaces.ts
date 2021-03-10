@@ -1,9 +1,11 @@
 import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@ts-awesome/orm';
 
-export interface IActiveSelect<T extends TableMetaProvider<InstanceType<T>>> extends ISelectBuilder<T> {
-  fetch<X=InstanceType<T>>(): Promise<X[]>;
+export interface IActiveSelect<T> {
+  fetch(): Promise<ReadonlyArray<T>>;
+  fetch<X extends TableMetaProvider<any>, R=InstanceType<X>>(Model: X): Promise<ReadonlyArray<R>>;
   count(): Promise<number>;
-  fetchOne<X=InstanceType<T>>(): Promise<X | null>;
+  fetchOne(): Promise<T | null>;
+  fetchOne<X extends TableMetaProvider<any>, R=InstanceType<X>>(Model: X): Promise<R | null>;
   exists(): Promise<boolean>;
 }
 
@@ -11,26 +13,29 @@ export type Insertable<T, ro extends keyof T> = Omit<T, ro>;
 export type Updatable<T, pk extends keyof T, ro extends keyof T> = Pick<T, pk> & Partial<Omit<T, pk | ro>>;
 
 export interface IEntityService<T, pk extends keyof T, ro extends keyof T> {
-  add(list: Insertable<T, ro>[]): Promise<T[]>;
+  add(list: Insertable<T, ro>[]): Promise<ReadonlyArray<T>>;
   addOne(_: Insertable<T, ro>): Promise<T>;
   upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<T[]>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<T[]>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
   updateOne(_: Updatable<T, pk, ro>): Promise<T>;
   deleteOne(_: Pick<T, pk>): Promise<T | null>;
   getOne(builder: WhereBuilder<T>): Promise<T | null>;
   getOne(values: Partial<T>): Promise<T | null>;
-  get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<T[]>;
-  get(values: Partial<T>, limit?: number, offset?: number): Promise<T[]>;
+  get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(values: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
 
-  select<T extends TableMetaProvider<InstanceType<T>>>(): IActiveSelect<T>;
-  delete(builder: WhereBuilder<T>, limit?: number): Promise<T[]>;
-  delete(values: Partial<T>, limit?: number): Promise<T[]>;
+  delete(builder: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  delete(values: Partial<T>, limit?: number): Promise<ReadonlyArray<T>>;
 
   count(builder: WhereBuilder<T>): Promise<number>;
   count(values: Partial<T>): Promise<number>;
+
   exists(builder: WhereBuilder<T>): Promise<boolean>;
   exists(values: Partial<T>): Promise<boolean>;
+
+  select(): IActiveSelect<T> & ISelectBuilder<T>;
+  select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
 }
 
 export interface IQueryExecutorProvider<TQuery> {
