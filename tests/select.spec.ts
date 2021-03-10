@@ -37,7 +37,7 @@ describe('select', () => {
   it('query one', async () => {
     compiler.mapper = () => all;
 
-    const result = await service.select().where(({id}) => id.eq("2")).fetchOne();
+    const result = await service.select().where(({id}) => id.eq(2)).fetchOne();
     expect(result).toEqual(all[0]);
   });
 });
