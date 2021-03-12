@@ -1,83 +1,84 @@
-import { injectable, unmanaged } from 'inversify';
-import {IEntityService, IQueryExecutorProvider, IActiveSelect, Insertable, Updatable} from './interfaces';
+import {injectable, unmanaged} from 'inversify';
+import {IActiveSelect, IEntityService, Insertable, IQueryExecutorProvider, Updatable} from './interfaces';
 
 import {
   count,
   Delete,
+  IBuildableQuery,
+  IBuildableQueryCompiler,
   ICountData,
   IDbDataReader,
-  Insert,
+  Insert, ISelectBuilder,
+  ITableInfo,
   Select,
   TableMetaProvider,
   Update,
   Upsert,
   WhereBuilder,
-  IBuildableQueryCompiler,
-  ITableInfo,
 } from '@ts-awesome/orm';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 @injectable()
-export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery, pk extends keyof T, ro extends keyof T> implements IEntityService<InstanceType<T>, pk, ro> {
+export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X extends TableMetaProvider<T>> implements IEntityService<T, pk, ro> {
 
   private readonly tableInfo: ITableInfo;
 
   constructor(
-    @unmanaged() protected readonly Model: TableMetaProvider<InstanceType<T>>,
+    @unmanaged() protected readonly Model: X,
     @unmanaged() protected readonly executor: IQueryExecutorProvider<TQuery>,
     @unmanaged() protected readonly compiler: IBuildableQueryCompiler<TQuery>,
-    @unmanaged() protected readonly reader: IDbDataReader<InstanceType<T>>,
+    @unmanaged() protected readonly reader: IDbDataReader<T>,
   ) {
     this.tableInfo = (Model.prototype as any).tableInfo;
   }
 
-  public async add(_: Insertable<InstanceType<T>, ro>[]): Promise<InstanceType<T>[]> {
-    const results = [];
+  public async add(_: Insertable<T, ro>[]): Promise<ReadonlyArray<T>> {
+    const results: T[] = [];
     for(let i = 0; i < _.length; i++){
       results.push(await this.addOne(_[i]));
     }
     return results;
   }
 
-  public async addOne(_: Insertable<InstanceType<T>, ro>): Promise<InstanceType<T>> {
+  public async addOne(_: Insertable<T, ro>): Promise<T> {
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
     const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result) as InstanceType<T>;
+    return this.reader.readOne(result)!;
   }
 
-  public async upsertOne(_: Insertable<InstanceType<T>, ro>, uniqueIndex?: string): Promise<InstanceType<T>> {
+  public async upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T> {
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
     const upsert = Upsert(this.Model).values(values).where(pk).conflict(uniqueIndex);
     const query = this.compiler.compile(upsert);
     const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result) as InstanceType<T>;
+    return this.reader.readOne(result)!;
   }
 
-  public async updateOne(_: Updatable<InstanceType<T>, pk, ro>): Promise<InstanceType<T>> {
+  public async updateOne(_: Updatable<T, pk, ro>): Promise<T> {
     const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(pk);
     const query = this.compiler.compile(update);
     const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result) as InstanceType<T>;
+    return this.reader.readOne(result)!;
   }
 
-  update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: Partial<InstanceType<T>>): Promise<InstanceType<T>[]>;
-  public async update(_: Partial<Omit<InstanceType<T>, pk | ro>>, condition: any): Promise<InstanceType<T>[]> {
+  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
+  public async update(_: Partial<Omit<T, pk | ro>>, condition: any): Promise<ReadonlyArray<T>> {
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(condition);
     const query = this.compiler.compile(update);
     const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readMany(result) as InstanceType<T>[];
+    return this.reader.readMany(result);
   }
 
-  public async deleteOne(_: Pick<InstanceType<T>, pk>): Promise<InstanceType<T> | null> {
+  public async deleteOne(_: Pick<T, pk>): Promise<T | null> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(pk).limit(1);
     const query = this.compiler.compile(del);
@@ -85,55 +86,57 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return this.reader.readOne(result) ?? null;
   }
 
-  delete(_: Partial<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
-  delete(_: WhereBuilder<InstanceType<T>>, limit?: number): Promise<InstanceType<T>[]>;
-  public async delete(_: any, limit?: number): Promise<InstanceType<T>[]> {
+  delete(_: Partial<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  delete(_: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  public async delete(_: any, limit?: number): Promise<ReadonlyArray<T>> {
     const del = Delete(this.Model).where(_).limit(limit as any);
     const query = this.compiler.compile(del);
     const result = await this.executor.getExecutor().execute(query);
     return this.reader.readMany(result);
   }
 
-  get(_: Partial<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
-  get(_: WhereBuilder<InstanceType<T>>, limit?: number, offset?: number): Promise<InstanceType<T>[]>;
-  public async get(_: any, limit?: number, offset?: number): Promise<InstanceType<T>[]> {
+  get(_: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(_: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  public async get(_: any, limit?: number, offset?: number): Promise<ReadonlyArray<T>> {
     return this.select().where(_).limit(limit as any).offset(offset as any).fetch();
   }
 
-  getOne(_: Partial<InstanceType<T>>): Promise<InstanceType<T> | null>;
-  getOne(_: WhereBuilder<InstanceType<T>>): Promise<InstanceType<T> | null>;
-  public async getOne(_: any): Promise<InstanceType<T> | null> {
+  getOne(_: Partial<T>): Promise<T | null>;
+  getOne(_: WhereBuilder<T>): Promise<T | null>;
+  public async getOne(_: any): Promise<T | null> {
     return this.select().where(_).fetchOne();
   }
 
-  count(_: Partial<InstanceType<T>>): Promise<number>;
-  count(_: WhereBuilder<InstanceType<T>>): Promise<number>
+  count(_: Partial<T>): Promise<number>;
+  count(_: WhereBuilder<T>): Promise<number>
   public async count(_: any): Promise<number> {
     return this.select().where(_).count();
   }
-  exists(_: Partial<InstanceType<T>>): Promise<boolean>;
-  exists(_: WhereBuilder<InstanceType<T>>): Promise<boolean>;
+  exists(_: Partial<T>): Promise<boolean>;
+  exists(_: WhereBuilder<T>): Promise<boolean>;
   public async exists(_: any): Promise<boolean> {
     return this.select().where(_).exists();
   }
 
-  public select<T extends TableMetaProvider<InstanceType<T>>>(): IActiveSelect<InstanceType<T>> {
-    const activeSelect: IActiveSelect<InstanceType<T>> =
+  public select(): IActiveSelect<T> & ISelectBuilder<T>;
+  public select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
+  public select(distinct = false): IActiveSelect<T> & ISelectBuilder<T> {
+    const activeSelect: IActiveSelect<T> & ISelectBuilder<T> =
     {
       // this is hack :-)
-      ...(Select(this.Model) as any),
+      ...(Select(this.Model, distinct) as any),
       fetch: async () => {
-        const query = this.compiler.compile(activeSelect);
+        const query = this.compiler.compile(activeSelect as any as IBuildableQuery);
         const result = await this.executor.getExecutor().execute(query);
         return this.reader.readMany(result) as any;
       },
       fetchOne: async () => {
-        const query = this.compiler.compile(activeSelect.limit(1));
+        const query = this.compiler.compile(activeSelect.limit(1) as any as IBuildableQuery);
         const result = await this.executor.getExecutor().execute(query);
         return this.reader.readOne(result) ?? null;
       },
       count: async () => {
-        const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1));
+        const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1) as any as IBuildableQuery);
         const result = await this.executor.getExecutor().execute(query);
         return this.reader.readCount(result as ICountData[]);
       },
@@ -143,7 +146,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return activeSelect;
   }
 
-  private getValuesForInsert(_: any): Partial<InstanceType<T>> {
+  private getValuesForInsert(_: any): Partial<InstanceType<X>> {
 
     Object.keys(_)
       .forEach(key => {
@@ -163,7 +166,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
     return this.setDefault(res);
   }
 
-  private getValuesForUpdate(_: any): Partial<InstanceType<T>> {
+  private getValuesForUpdate(_: any): Partial<InstanceType<X>> {
     Object.keys(_)
       .forEach(key => {
         if (_[key] === undefined) {
@@ -180,7 +183,7 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private getPk(_: any): Partial<InstanceType<T>> {
+  private getPk(_: any): Partial<InstanceType<X>> {
     const {fields} = this.tableInfo;
     return Object
       .keys(_)
@@ -188,10 +191,10 @@ export class EntityService<T extends TableMetaProvider<InstanceType<T>>, TQuery,
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private setDefault(_: Partial<InstanceType<T>>): Partial<InstanceType<T>> {
+  private setDefault(_: Partial<InstanceType<X>>): Partial<InstanceType<X>> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
       if (fieldInfo.default !== undefined) {
-        _[prop] = _[prop] ?? fieldInfo.default;
+        (_ as any)[prop] = _[prop] ?? fieldInfo.default;
       }
     });
     return _;
