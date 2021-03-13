@@ -2,10 +2,10 @@ import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@
 
 export interface IActiveSelect<T> {
   fetch(): Promise<ReadonlyArray<T>>;
-  fetch<X extends TableMetaProvider<any>, R=InstanceType<X>>(Model: X): Promise<ReadonlyArray<R>>;
+  fetch<X extends TableMetaProvider, R=InstanceType<X>>(Model: X): Promise<ReadonlyArray<R>>;
   count(): Promise<number>;
   fetchOne(): Promise<T | null>;
-  fetchOne<X extends TableMetaProvider<any>, R=InstanceType<X>>(Model: X): Promise<R | null>;
+  fetchOne<X extends TableMetaProvider, R=InstanceType<X>>(Model: X): Promise<R | null>;
   exists(): Promise<boolean>;
 }
 
@@ -18,7 +18,7 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T> {
   upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T>;
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
   update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
-  updateOne(_: Updatable<T, pk, ro>): Promise<T>;
+  updateOne(_: Updatable<T, pk, ro>): Promise<T | null>;
   deleteOne(_: Pick<T, pk>): Promise<T | null>;
   getOne(builder: WhereBuilder<T>): Promise<T | null>;
   getOne(values: Partial<T>): Promise<T | null>;

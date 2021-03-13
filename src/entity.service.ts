@@ -6,9 +6,8 @@ import {
   Delete,
   IBuildableQuery,
   IBuildableQueryCompiler,
-  ICountData,
-  IDbDataReader,
-  Insert, ISelectBuilder,
+  Insert,
+  ISelectBuilder,
   ITableInfo,
   Select,
   TableMetaProvider,
@@ -16,11 +15,12 @@ import {
   Upsert,
   WhereBuilder,
 } from '@ts-awesome/orm';
+import {readModelMeta} from "@ts-awesome/orm/dist/builder";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 @injectable()
-export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X extends TableMetaProvider<T>> implements IEntityService<T, pk, ro> {
+export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X extends TableMetaProvider> implements IEntityService<T, pk, ro> {
 
   private readonly tableInfo: ITableInfo;
 
@@ -28,9 +28,8 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     @unmanaged() protected readonly Model: X,
     @unmanaged() protected readonly executor: IQueryExecutorProvider<TQuery>,
     @unmanaged() protected readonly compiler: IBuildableQueryCompiler<TQuery>,
-    @unmanaged() protected readonly reader: IDbDataReader<T>,
   ) {
-    this.tableInfo = (Model.prototype as any).tableInfo;
+    this.tableInfo = readModelMeta(Model);
   }
 
   public async add(_: Insertable<T, ro>[]): Promise<ReadonlyArray<T>> {
@@ -45,8 +44,8 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result)!;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model) as any;
+    return result;
   }
 
   public async upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T> {
@@ -55,17 +54,17 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
 
     const upsert = Upsert(this.Model).values(values).where(pk).conflict(uniqueIndex);
     const query = this.compiler.compile(upsert);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result)!;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model) as any;
+    return result;
   }
 
-  public async updateOne(_: Updatable<T, pk, ro>): Promise<T> {
+  public async updateOne(_: Updatable<T, pk, ro>): Promise<T | null> {
     const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(pk);
     const query = this.compiler.compile(update);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result)!;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    return result ?? null;
   }
 
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
@@ -74,16 +73,15 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(condition);
     const query = this.compiler.compile(update);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readMany(result);
+    return await this.executor.getExecutor().execute(query, this.Model);
   }
 
   public async deleteOne(_: Pick<T, pk>): Promise<T | null> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(pk).limit(1);
     const query = this.compiler.compile(del);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readOne(result) ?? null;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    return result ?? null;
   }
 
   delete(_: Partial<T>, limit?: number): Promise<ReadonlyArray<T>>;
@@ -91,8 +89,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
   public async delete(_: any, limit?: number): Promise<ReadonlyArray<T>> {
     const del = Delete(this.Model).where(_).limit(limit as any);
     const query = this.compiler.compile(del);
-    const result = await this.executor.getExecutor().execute(query);
-    return this.reader.readMany(result);
+    return await this.executor.getExecutor().execute(query, this.Model);
   }
 
   get(_: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
@@ -125,20 +122,18 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     {
       // this is hack :-)
       ...(Select(this.Model, distinct) as any),
-      fetch: async () => {
+      fetch: async (Model?) => {
         const query = this.compiler.compile(activeSelect as any as IBuildableQuery);
-        const result = await this.executor.getExecutor().execute(query);
-        return this.reader.readMany(result) as any;
+        return await this.executor.getExecutor().execute(query, Model ?? this.Model);
       },
-      fetchOne: async () => {
+      fetchOne: async (Model?) => {
         const query = this.compiler.compile(activeSelect.limit(1) as any as IBuildableQuery);
-        const result = await this.executor.getExecutor().execute(query);
-        return this.reader.readOne(result) ?? null;
+        const [result] = await this.executor.getExecutor().execute(query, Model ?? this.Model);
+        return result ?? null;
       },
       count: async () => {
         const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1) as any as IBuildableQuery);
-        const result = await this.executor.getExecutor().execute(query);
-        return this.reader.readCount(result as ICountData[]);
+        return await this.executor.getExecutor().execute(query, true);
       },
       exists: async () => (await activeSelect.count()) > 0
     };

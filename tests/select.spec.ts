@@ -1,8 +1,7 @@
 import 'reflect-metadata';
-import {EntityService, UnitOfWork} from '../dist';
-import {TestCompiler, TestDriver} from '@ts-awesome/orm-test-driver';
-import {dbField, DbReader, dbTable} from '@ts-awesome/orm';
-import {IEntityService} from "../src";
+import {EntityService, UnitOfWork, IEntityService} from '../dist';
+import {TestCompiler, TestDriver} from '@ts-awesome/orm/dist/test-driver';
+import {dbField, dbTable} from '@ts-awesome/orm';
 
 @dbTable('Model')
 class Model {
@@ -27,9 +26,8 @@ describe('select', () => {
   beforeAll(() => {
     const driver = new TestDriver();
     const uow = new UnitOfWork(driver);
-    const reader = new DbReader(Model);
 
-    service = new EntityService(Model, uow, compiler, reader) as any;
+    service = new EntityService(Model, uow, compiler) as any;
   });
 
   it('query all', async () => {
