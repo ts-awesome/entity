@@ -44,7 +44,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model) as any;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model);
     return result;
   }
 
@@ -54,7 +54,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
 
     const upsert = Upsert(this.Model).values(values).where(pk).conflict(uniqueIndex);
     const query = this.compiler.compile(upsert);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model) as any;
+    const [result] = await this.executor.getExecutor().execute(query, this.Model);
     return result;
   }
 
@@ -78,7 +78,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
 
   public async deleteOne(_: Pick<T, pk>): Promise<T | null> {
     const pk = this.getPk(_);
-    const del = Delete(this.Model).where(pk).limit(1);
+    const del = Delete(this.Model).where(pk); // no need for limit, as PG doesn't support it
     const query = this.compiler.compile(del);
     const [result] = await this.executor.getExecutor().execute(query, this.Model);
     return result ?? null;
@@ -118,27 +118,17 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
   public select(): IActiveSelect<T> & ISelectBuilder<T>;
   public select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
   public select(distinct = false): IActiveSelect<T> & ISelectBuilder<T> {
-    const activeSelect: IActiveSelect<T> & ISelectBuilder<T> =
+    const activeSelect: IActiveSelect<T> & ISelectBuilder<T> & IBuildableQuery =
     {
       // this is hack :-)
       ...(Select(this.Model, distinct) as any),
-      fetch: async (Model?) => {
-        const query = this.compiler.compile(activeSelect as any as IBuildableQuery);
-        return await this.executor.getExecutor().execute(query, Model ?? this.Model);
-      },
+      fetch: (Model?) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect), Model ?? this.Model),
       fetchOne: async (Model?) => {
-        const query = this.compiler.compile(activeSelect.limit(1) as any as IBuildableQuery);
-        const [result] = await this.executor.getExecutor().execute(query, Model ?? this.Model);
+        const [result] = await activeSelect.limit(1).fetch(Model);
         return result ?? null;
       },
-      fetchScalar: async () => {
-        const query = this.compiler.compile(activeSelect as any as IBuildableQuery);
-        return await this.executor.getExecutor().execute(query, true);
-      },
-      count: async () => {
-        const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1) as any as IBuildableQuery);
-        return await this.executor.getExecutor().execute(query, true);
-      },
+      fetchScalar: () => this.executor.getExecutor().execute(this.compiler.compile(activeSelect), true),
+      count: () => activeSelect.columns(() => [count()]).limit(1).fetchScalar(),
       exists: async () => (await activeSelect.count()) > 0
     };
 

@@ -7,7 +7,7 @@ export interface IActiveSelect<T> {
   fetchOne(): Promise<T | null>;
   fetchOne<X extends TableMetaProvider, R=InstanceType<X>>(Model: X): Promise<R | null>;
   exists(): Promise<boolean>;
-  fetchScalar(): Promise<T | null>;
+  fetchScalar(): Promise<number>;
 }
 
 export type Insertable<T, ro extends keyof T> = Omit<T, ro>;
