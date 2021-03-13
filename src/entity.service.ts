@@ -131,6 +131,10 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
         const [result] = await this.executor.getExecutor().execute(query, Model ?? this.Model);
         return result ?? null;
       },
+      fetchScalar: async () => {
+        const query = this.compiler.compile(activeSelect as any as IBuildableQuery);
+        return await this.executor.getExecutor().execute(query, true);
+      },
       count: async () => {
         const query = this.compiler.compile(activeSelect.columns(() => [count()]).limit(1) as any as IBuildableQuery);
         return await this.executor.getExecutor().execute(query, true);
