@@ -20,19 +20,19 @@ import {readModelMeta} from "@ts-awesome/orm/dist/builder";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 @injectable()
-export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X extends TableMetaProvider> implements IEntityService<T, pk, ro> {
+export class EntityService<T, pk extends keyof T, ro extends keyof T, optional extends keyof T, TQuery> implements IEntityService<T, pk, ro, optional> {
 
   private readonly tableInfo: ITableInfo;
 
   constructor(
-    @unmanaged() protected readonly Model: X,
+    @unmanaged() protected readonly Model: TableMetaProvider<T>,
     @unmanaged() protected readonly executor: IQueryExecutorProvider<TQuery>,
     @unmanaged() protected readonly compiler: IBuildableQueryCompiler<TQuery>,
   ) {
     this.tableInfo = readModelMeta(Model);
   }
 
-  public async add(_: Insertable<T, ro>[]): Promise<ReadonlyArray<T>> {
+  public async add(_: Insertable<T, ro, optional>[]): Promise<ReadonlyArray<T>> {
     const results: T[] = [];
     for(let i = 0; i < _.length; i++){
       results.push(await this.addOne(_[i]));
@@ -40,7 +40,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     return results;
   }
 
-  public async addOne(_: Insertable<T, ro>): Promise<T> {
+  public async addOne(_: Insertable<T, ro, optional>): Promise<T> {
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
@@ -48,7 +48,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     return result;
   }
 
-  public async upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T> {
+  public async upsertOne(_: Insertable<T, ro, optional>, uniqueIndex?: string): Promise<T> {
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
@@ -135,7 +135,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     return activeSelect;
   }
 
-  private getValuesForInsert(_: any): Partial<InstanceType<X>> {
+  private getValuesForInsert(_: any): Partial<T> {
 
     Object.keys(_)
       .forEach(key => {
@@ -155,7 +155,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
     return this.setDefault(res);
   }
 
-  private getValuesForUpdate(_: any): Partial<InstanceType<X>> {
+  private getValuesForUpdate(_: any): Partial<T> {
     Object.keys(_)
       .forEach(key => {
         if (_[key] === undefined) {
@@ -172,7 +172,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private getPk(_: any): Partial<InstanceType<X>> {
+  private getPk(_: any): Partial<T> {
     const {fields} = this.tableInfo;
     return Object
       .keys(_)
@@ -180,7 +180,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, TQuery, X 
       .reduce((p: any, c: string) => ({ ...p, [c]: _[c] }), {});
   }
 
-  private setDefault(_: Partial<InstanceType<X>>): Partial<InstanceType<X>> {
+  private setDefault(_: Partial<T>): Partial<T> {
     this.tableInfo.fields.forEach((fieldInfo, prop) => {
       if (fieldInfo.default !== undefined) {
         (_ as any)[prop] = _[prop] ?? fieldInfo.default;

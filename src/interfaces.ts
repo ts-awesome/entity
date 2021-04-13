@@ -10,13 +10,27 @@ export interface IActiveSelect<T> {
   fetchScalar(): Promise<number>;
 }
 
-export type Insertable<T, ro extends keyof T> = Omit<T, ro>;
-export type Updatable<T, pk extends keyof T, ro extends keyof T> = Pick<T, pk> & Partial<Omit<T, pk | ro>>;
+/**
+ * exclude - exclude fields, eg readonly or auto primary key
+ * optional - optional field, eg ones with default values
+ */
+export type Insertable<T, exclude extends keyof T, optional extends keyof T> = Omit<T, exclude | optional> & Partial<Pick<T, optional>>;
 
-export interface IEntityService<T, pk extends keyof T, ro extends keyof T> {
-  add(list: Insertable<T, ro>[]): Promise<ReadonlyArray<T>>;
-  addOne(_: Insertable<T, ro>): Promise<T>;
-  upsertOne(_: Insertable<T, ro>, uniqueIndex?: string): Promise<T>;
+/**
+ * pk - primary key
+ * exclude - exclude fields, eg readonly or auto primary key
+ */
+export type Updatable<T, pk extends keyof T, exclude extends keyof T> = Pick<T, pk> & Partial<Omit<T, pk | exclude>>;
+
+/**
+ * pk - primary key
+ * ro - exclude fields, eg readonly or auto primary key
+ * optional - optional field, eg ones with default values
+ */
+export interface IEntityService<T, pk extends keyof T, ro extends keyof T, optional extends keyof T> {
+  add(list: Insertable<T, ro, optional>[]): Promise<ReadonlyArray<T>>;
+  addOne(_: Insertable<T, ro, optional>): Promise<T>;
+  upsertOne(_: Insertable<T, ro, optional>, uniqueIndex?: string): Promise<T>;
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
   update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
   updateOne(_: Updatable<T, pk, ro>): Promise<T | null>;
