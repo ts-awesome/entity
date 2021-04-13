@@ -14,13 +14,13 @@ export interface IActiveSelect<T> {
  * exclude - exclude fields, eg readonly or auto primary key
  * optional - optional field, eg ones with default values
  */
-export type Insertable<T, exclude extends keyof T, optional extends keyof T> = Omit<T, exclude | optional> & Partial<Pick<T, optional>>;
+export type Insertable<T, exclude extends keyof T = never, optional extends keyof T = never> = Omit<T, exclude | optional> & Partial<Pick<T, optional>>;
 
 /**
  * pk - primary key
  * exclude - exclude fields, eg readonly or auto primary key
  */
-export type Updatable<T, pk extends keyof T, exclude extends keyof T> = Pick<T, pk> & Partial<Omit<T, pk | exclude>>;
+export type Updatable<T, pk extends keyof T, exclude extends keyof T = never> = Pick<T, pk> & Partial<Omit<T, pk | exclude>>;
 
 /**
  * pk - primary key

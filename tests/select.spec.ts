@@ -19,7 +19,7 @@ class Aggregated {
 }
 
 describe('select', () => {
-  let service: IEntityService<Model, 'id', 'id'>;
+  let service: IEntityService<Model, 'id', 'id', never>;
   const compiler = new TestCompiler();
   const all: any = [{id: 1, value: 'test'}, {id: 2, value: 'other'}, {id: 3, value: 'other'}, {id: 4, value: 'other'}] as Model[];
 
