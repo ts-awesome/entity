@@ -17,6 +17,15 @@ import {
 } from '@ts-awesome/orm';
 import {readModelMeta} from "@ts-awesome/orm/dist/builder";
 
+function cloneWithNonEnumerable<T>(x: T): T {
+  const c: T = {} as never;
+  for(const key of Object.getOwnPropertyNames(x)) {
+    c[key] = x[key];
+  }
+
+  return c;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 @injectable()
@@ -121,7 +130,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const activeSelect: IActiveSelect<T> & ISelectBuilder<T> & IBuildableQuery =
     {
       // this is hack :-)
-      ...(Select(this.Model, distinct) as any),
+      ...cloneWithNonEnumerable(Select(this.Model, distinct) as any),
       fetch: (Model?) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect), Model ?? this.Model),
       fetchOne: async (Model?) => {
         const [result] = await activeSelect.limit(1).fetch(Model);
