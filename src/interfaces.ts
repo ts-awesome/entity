@@ -1,4 +1,11 @@
-import {ISelectBuilder, TableMetaProvider, WhereBuilder, IQueryExecutor} from '@ts-awesome/orm';
+import {
+  ISelectBuilder,
+  TableMetaProvider,
+  WhereBuilder,
+  IQueryExecutor,
+  IsolationLevel,
+  IQueryData
+} from '@ts-awesome/orm';
 
 export interface IActiveSelect<T> {
   fetch(): Promise<ReadonlyArray<T>>;
@@ -53,15 +60,16 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T, optio
   select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
 }
 
-export interface IQueryExecutorProvider<TQuery> {
-  getExecutor(): IQueryExecutor<TQuery>;
+export interface IQueryExecutorProvider<TQuery, R = IQueryData> {
+  getExecutor(): IQueryExecutor<TQuery, R>;
 }
 
 export type Action<T> = () => T | Promise<T>;
 
-export interface IUnitOfWork<TQuery> extends IQueryExecutorProvider<TQuery> {
+export interface IUnitOfWork<TQuery, R = IQueryData, IL = IsolationLevel> extends IQueryExecutorProvider<TQuery, R> {
   auto<TData>(action: Action<TData>): Promise<TData>;
   begin(): Promise<void>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
+  setIsolationLevel(isolationLevel: IL): Promise<void>;
 }
