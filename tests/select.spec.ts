@@ -1,8 +1,7 @@
 import 'reflect-metadata';
-import {EntityService, UnitOfWork} from '../dist';
-import {TestCompiler, TestDriver} from '@ts-awesome/orm-test-driver';
-import {dbField, DbReader, dbTable} from '@ts-awesome/orm';
-import {IEntityService} from "../src";
+import {EntityService, UnitOfWork, IEntityService} from '../dist';
+import {TestCompiler, TestDriver} from '@ts-awesome/orm/dist/test-driver';
+import {alias, and, count, dbField, dbTable, desc, of, Select, TableMetadataSymbol} from '@ts-awesome/orm';
 
 @dbTable('Model')
 class Model {
@@ -20,43 +19,231 @@ class Aggregated {
 }
 
 describe('select', () => {
-  let service: IEntityService<Model, 'id', 'id'>;
+  let service: IEntityService<Model, 'id', 'id', never>;
   const compiler = new TestCompiler();
+  let driver!: TestDriver;
   const all: any = [{id: 1, value: 'test'}, {id: 2, value: 'other'}, {id: 3, value: 'other'}, {id: 4, value: 'other'}] as Model[];
+  const aggregated: any = [{id: 1, count: 1}, {id: 2, count: 2}] as Aggregated[];
 
   beforeAll(() => {
-    const driver = new TestDriver();
+    driver = new TestDriver();
     const uow = new UnitOfWork(driver);
-    const reader = new DbReader(Model);
 
-    service = new EntityService(Model, uow, compiler, reader) as any;
+    service = new EntityService(Model, uow, compiler) as any;
   });
 
   it('query all', async () => {
-    compiler.mapper = () => all;
+    driver.mapper = () => all;
 
     const result = await service.select().where(x => x.id.eq(5)).fetch()
     expect(result).toEqual(all);
   });
 
   it('query one', async () => {
-    compiler.mapper = () => all;
+    driver.mapper = () => all;
 
     const result = await service.select().where(({id}) => id.eq(2)).fetchOne();
     expect(result).toEqual(all[0]);
   });
 
   it('query all aggregated', async () => {
-    compiler.mapper = () => all;
+    driver.mapper = () => aggregated;
 
     const result = await service.select().where(x => x.id.eq(5)).fetch(Aggregated)
-    expect(result).toEqual(all);
+    expect(result).toEqual(aggregated);
   });
 
   it('query one aggregated', async () => {
-    compiler.mapper = () => all;
+    driver.mapper = () => aggregated;
 
     const result = await service.select().where(({id}) => id.eq(2)).fetchOne(Aggregated);
-    expect(result).toEqual(all[0]);
+    expect(result).toEqual(aggregated[0]);
   });
+
+  it('query with order by and limit', async () => {
+    let query;
+    driver.mapper = ({raw}) => {
+      query = raw;
+      return all;
+    }
+
+    const result = await service.select().where(({id}) => id.eq(2)).orderBy(['value']).limit(20).fetch();
+    expect(result).toEqual(all);
+
+    expect(query).toStrictEqual({
+      "_alias": null,
+      "_distinct": false,
+      "_limit": 20,
+      "_orderBy": [
+        {
+          "_column": {
+            "name": "value",
+            "table": "Model",
+            "wrapper": undefined,
+          }
+        }
+      ],
+      "_table": Model[TableMetadataSymbol],
+      "_type": "SELECT",
+      "_where": [
+        {
+          "_operands": [
+            {
+              "_column": {
+                "name": "id",
+                "table": "Model",
+                "wrapper": undefined,
+              }
+            },
+            2
+          ],
+          "_operator": "="
+        }
+      ]
+    })
+  })
+
+  it ('query with subqueries, order by and limit', async () => {
+    @dbTable('actions')
+    class PersonAction {
+      @dbField public personId!: number;
+      @dbField public action!: string;
+      @dbField public created!: Date;
+    }
+
+    const ts = new Date(Date.now() - 3600);
+
+    let query;
+    driver.mapper = ({raw,}) => {
+      query = raw;
+      return all;
+    }
+
+    const result = await service.select()
+      .columns(({id}) => [
+        id,
+        alias(
+          Select(PersonAction)
+            .columns(() => [count()])
+            .where(({personId, action, created}) => and(
+              personId.eq(of(Model, 'id')),
+              action.eq('a'),
+              created.gte(ts)
+            ))
+            .asScalar()
+            .mul(1),
+          'score'
+        )
+      ]).orderBy(() => [desc(of(null, 'score'))])
+      .limit(20)
+      .fetch();
+
+    expect(result).toEqual(all);
+
+    expect(query).toStrictEqual({
+      "_alias": null,
+      "_columns": [
+        {
+          "_column": {
+            "name": "id",
+            "table": "Model",
+            "wrapper": undefined,
+          }
+        },
+        {
+          "_alias": "score",
+          "_operands": [
+            {
+              "_operands": [
+                {
+                  "_operands": [
+                    {
+                      "_alias": null,
+                      "_columns": [
+                        {
+                          "_args": [
+                            "*"
+                          ],
+                          "_func": "COUNT"
+                        }
+                      ],
+                      "_distinct": false,
+                      "_table": PersonAction[TableMetadataSymbol],
+                      "_type": "SELECT",
+                      "_where": [
+                        {
+                          "_operands": [
+                            {
+                              "_operands": [
+                                {
+                                  "_column": {
+                                    "name": "personId",
+                                    "table": "actions",
+                                    "wrapper": undefined,
+                                  }
+                                },
+                                {
+                                  "_column": {
+                                    "name": "id",
+                                    "table": "Model",
+                                  }
+                                }
+                              ],
+                              "_operator": "="
+                            },
+                            {
+                              "_operands": [
+                                {
+                                  "_column": {
+                                    "name": "action",
+                                    "table": "actions",
+                                    "wrapper": undefined,
+                                  }
+                                },
+                                "a"
+                              ],
+                              "_operator": "="
+                            },
+                            {
+                              "_operands": [
+                                {
+                                  "_column": {
+                                    "name": "created",
+                                    "table": "actions",
+                                    "wrapper": undefined,
+                                  }
+                                },
+                                ts
+                              ],
+                              "_operator": ">="
+                            }
+                          ],
+                          "_operator": "AND"
+                        }
+                      ]
+                    }
+                  ],
+                  "_operator": "SUBQUERY"
+                },
+                1
+              ],
+              "_operator": "*"
+            }
+          ]
+        }
+      ],
+      "_distinct": false,
+      "_limit": 20,
+      "_orderBy": [
+        {
+          "_column": {
+            "name": "score"
+          },
+          "_order": "DESC"
+        }
+      ],
+      "_table": Model[TableMetadataSymbol],
+      "_type": "SELECT"
+    });
+  })
 });
