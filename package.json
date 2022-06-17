@@ -20,7 +20,11 @@
   },
   "name": "@ts-awesome/entity",
   "version": "0.0.0",
-  "description": "TypeScript Entity Service",
+  "description": "TypeScript EntityService extension for @ts-awesome/orm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-awesome/entity"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "Volodymyr Iatsyshyn <viatsyshyn@gmail.com>",

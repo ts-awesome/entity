@@ -1,68 +1,228 @@
-# ts-entity
+# ts-awesome/entity
 
-Entity service build on top of `@viatsyshyn/ts-orm`
+TypeScript EntityService extension for [@ts-awesome/orm](https://github.com/ts-awesome/orm)
 
-## Example usage
+Key features:
 
-Example uses PostgreSQL driver `@viatsyshyn/ts-orm-pg`
+* @injectable via [invesify](https://github.com/inversify/InversifyJS)
+* strict type checks and definitions
+* thin wrapper over base [@ts-awesome/orm](https://github.com/ts-awesome/orm)
+* UnitOfWork and transaction management made easier
+
+## Basic model and interfaces
 
 ```ts
-// Generic setup
+import {dbTable, dbField} from '@ts-awesome/orm';
+import {serviceSymbolFor, IEntityService} from '@ts-awesome/entity';
 
-function setUpRootContainer(container: Container) {
-
-    const sqlConfig = config.get<pg.PoolConfig>('dbConfig');
-    const pool = new pg.Pool(sqlConfig);
-
-    container
-        .bind<any>(Symbol.for('pg.Pool'))
-        .toConstantValue(pool);
-
-    // BIND DB
-    container
-        .bind<IQueryDriver<ISqlQuery>>(Symbols.SqlQueryDriver)
-        .toDynamicValue(({container}: interfaces.Context) => {
-            return new PgDriver(container.get<any>(Symbol.for('pg.Pool'));
-        });
-
-    container
-        .bind<IBuildableQueryCompiler<ISqlQuery>>(Symbols.SqlQueryCompiler)
-        .to(PgCompiler);
+@dbTable('some_table')
+class SomeModel {
+  @dbField({
+    primaryKey: true
+  })
+  public id!: number;
+  
+  @dbField
+  public title!: string;
+  
+  @dbField({
+    model: Number,
+    nullable: true,
+  })
+  public authorId?: number | null;
+  
+  @dbField({
+    readonly: true
+  })
+  public readonly createdAt!: Date;
 }
 
-// This should be done in request handler scoped container
+// for more details on model definition, please check @ts-awesome/orm
 
-export function setupRequestContainer(container: Container, req: Request) {
+// typicly used with IoC containers 
+export const SomeModelEntityServiceSymbol = serviceSymbolFor(SomeModel);
 
-    container
-      .bind<IUnitOfWork<ISqlQuery>>(Symbols.UnitOfWork)
-      .toDymanicValue(({container}: interfaces.Context) => {
-        const driver = container.get<IQueryDriver<ISqlQuery>>(Symbol.SqlQueryDriver); 
-        return new UnitOfWork<ISqlQuery>(driver);
-      })
-      .inSingletonScope();
-        
-    [
-        UserModel
-    ]
-    .forEach(Model => {
-       container
-         .bind<IEntityService<any>>(Symbols.serviceFor(Model))
-         .toDynamicValue(({container}: interfaces.Context) => {
-             let executorProvider = container.get<IQueryExecutorProvider<ISqlQuery>>(Symbols.UnitOfWork);
-             let queryBuilder = container.get<IBuildableQueryCompiler<ISqlQuery>>(Symbols.SqlQueryCompiler);
-             let dbDataReader = new DbReader<any>(Model);
-    
-             return new EntityService(<any>Model, executorProvider, queryBuilder, dbDataReader);
-         });
-    })
+export interface ISomeModelEntityService extends IEntityService<SomeModel, 
+  'id', // primary key fields 
+  'id' | 'createdAt',  // readonly fields
+  'authorId' // optional fields
+> {}
+
+```
+
+## Simple operations
+
+```ts
+
+const entityService: ISomeModelEntityService;
+
+// find entity by primary key
+const a = entityService.getOne({id: 1});
+
+// find entities by some author
+const list = entityService.get({authorId: 1});
+
+// lets add new entity
+const added = entityService.addOne({
+  title: 'New book'
+})
+
+// lets update some
+const updated = entityService.updateOne({
+  id: added.id,
+  authorId: 5,
+});
+
+// and delete
+const deleted = entityService.deleteOne({
+  id: added.id,
+});
+
+// also all operations support where builder
+
+const since = new Date(Date.now() - 3600 * 1000); // an hour ago
+// lets select recently created entities
+const recent = entityService.get(({createAd}) => authorId.gte(since));
+
+// or find total number of such
+const total = entityService.count(({createAd}) => authorId.gte(since));
+
+// we can build complex logic as well
+
+const baseQuery = entityService.select().where(({createAd}) => authorId.gte(since));
+
+const count = await baseQuery.count();
+const first10 = await baseQuery.limit(10).fetch();
+```
+
+For more details on query builder, please check [@ts-awesome/orm](https://github.com/ts-awesome/orm)
+
+# Bare use
+
+```ts
+
+import {EntityService, UnitOfWork} from "@ts-awesome/entity";
+import {IBuildableQueryCompiler, IQueryExecutor, IQueryExecutorProvider} from "@ts-awesome/orm";
+
+
+const driver: IQueryExecutor; // specific to orm driver
+const compiler: IBuildableQueryCompiler;  // specific to orm driver
+
+const executorProvider: IQueryExecutorProvider = new UnitOfWork(driver);
+
+const entityService: ISomeModelEntityService = new EntityService(
+  SomeModel,
+  executorProvider, // typicly current UnitOfWork or orm driver executor provider
+  compiler, // buildable query compiler
+);
+
+```
+
+## Use with IoC container
+
+Dynamicly create `EntityService` instance when requested
+
+```ts
+import {Container} from "inversify";
+
+const container: Container;
+const compiler: IBuildableQueryCompiler;  // specific to orm driver
+
+container.bind<ISomeModelEntityService>(SomeModelEntityServiceSymbol)
+  .toDynamicValue((context) => {
+    const executorProvider = context.get<IQueryExecutorProvider>(Symbol.for('IQueryExecutorProvider'));
+    return new EntityService<SomeModel,never,never,never>(SomeModel, executorProvider, compiler);
+  })
+
+```
+
+Or define explicit `SomeModelEntityService` class
+
+```ts
+
+import {Container, injectable, inject} from "inversify";
+import {IBuildableQueryCompiler, IQueryExecutorProvider} from "@ts-awesome/orm";
+
+@injectable
+class SomeModelEntityService
+  extends EntityService<SomeModel, 'id', 'id' | 'createdAt', 'authorId'>
+  implements ISomeModelEntityService {
+
+  constructor(
+    @inject(Symbol.for('IQueryExecutorProvider')) executorProvider: IQueryExecutorProvider,
+    @inject(Symbol.for('IBuildableQueryCompiler')) compiler: IBuildableQueryCompiler,
+  ) {
+    super(SomeModel, executorProvider, compiler);
+  }
+}
+
+const container: Container;
+container.bind<ISomeModelEntityService>(SomeModelEntityServiceSymbol)
+  .to(SomeModelEntityService)
+
+```
+
+## UnitOfWork and transactions
+
+`UnitOfWork` is used when transaction management is required. Best way to use it on 
+the highest level possible. For example within request handler. 
+
+Other option is to rebind `IQueryExecutorProvider` within IoC to UoW when needed
+
+Sample usage
+
+```ts
+import {Container} from "inversify";
+import {UnitOfWork} from "@ts-awesome/entity";
+import {IBuildableQueryCompiler, IQueryExecutor, IQueryExecutorProvider} from "@ts-awesome/orm";
+import {IUnitOfWork} from "./interfaces";
+
+const driver: IQueryExecutor; // specific to orm driver
+const container: Container;
+
+container
+  .rebind<IUnitOfWork>(Symbol.for('IUnitOfWork'))
+  .toDynamicValue(({context}) => new UnitOfWork(driver));
+
+container
+  .rebind<IQueryExecutorProvider>(Symbol.for('IQueryExecutorProvider'))
+  .toDynamicValue(({context}) => context.get<IUnitOfWork>(Symbol.for('IUnitOfWork')));
+
+```
+
+Auto managed transaction
+
+```ts 
+const entityService = container.get<SomeModelEntityServiceSymbol>();
+const uow = container.get<IUnitOfWork>(Symbol.for('IUnitOfWork'));
+
+const result = await uow.auto(async () => {
+  await entityService.updateOne({id: 1, authorId: null});
+  await entityService.deleteOne({id: 2});
+  return await entityService.addOne({title: 'New'});
+});
+```
+Manual managed transactions
+
+```ts
+const entityService = container.get<SomeModelEntityServiceSymbol>();
+const uow = container.get<IUnitOfWork>(Symbol.for('IUnitOfWork'));
+
+let result;
+await uow.begin();
+try {
+  await entityService.updateOne({id: 1, authorId: null});
+  await entityService.deleteOne({id: 2});
+  result = await entityService.addOne({title: 'New'});
+  await uow.commit();
+} catch (e) {
+  await uow.rollback();
+  throw e;
 }
 ```
 
-```ts
-const userEntityService = container.get<IEntityService<UserModel>(Symbols.serviceFor(UserModel));
 
-const user = await userEntityService.getOne({id: 1}); // get user by id
-const admins = await userEntityService.get({role: 'admin'}); // get admins
-const justAdded = await userEntityService.addOne({ /* required values here */}); 
-```
+# License
+May be freely distributed under the [MIT license](https://opensource.org/licenses/MIT).
+
+Copyright (c) 2022 Volodymyr Iatsyshyn and other contributors
