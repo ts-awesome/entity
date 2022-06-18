@@ -124,13 +124,18 @@ Dynamicly create `EntityService` instance when requested
 
 ```ts
 import {Container} from "inversify";
+import {
+  IBuildableQueryCompiler,
+  IQueryExecutorProvider,
+  SqlQueryExecutorProviderSymbol
+} from "@ts-awesome/orm";
 
 const container: Container;
 const compiler: IBuildableQueryCompiler;  // specific to orm driver
 
 container.bind<ISomeModelEntityService>(SomeModelEntityServiceSymbol)
   .toDynamicValue((context) => {
-    const executorProvider = context.get<IQueryExecutorProvider>(Symbol.for('IQueryExecutorProvider'));
+    const executorProvider = context.get<IQueryExecutorProvider>(SqlQueryExecutorProviderSymbol);
     return new EntityService<SomeModel,never,never,never>(SomeModel, executorProvider, compiler);
   })
 
@@ -139,9 +144,13 @@ container.bind<ISomeModelEntityService>(SomeModelEntityServiceSymbol)
 Or define explicit `SomeModelEntityService` class
 
 ```ts
-
 import {Container, injectable, inject} from "inversify";
-import {IBuildableQueryCompiler, IQueryExecutorProvider} from "@ts-awesome/orm";
+import {
+  IBuildableQueryCompiler, 
+  IQueryExecutorProvider, 
+  SqlQueryExecutorProviderSymbol, 
+  SqlQueryBuildableQueryCompilerSymbol
+} from "@ts-awesome/orm";
 
 @injectable
 class SomeModelEntityService
@@ -149,8 +158,8 @@ class SomeModelEntityService
   implements ISomeModelEntityService {
 
   constructor(
-    @inject(Symbol.for('IQueryExecutorProvider')) executorProvider: IQueryExecutorProvider,
-    @inject(Symbol.for('IBuildableQueryCompiler')) compiler: IBuildableQueryCompiler,
+    @inject(SqlQueryExecutorProviderSymbol) executorProvider: IQueryExecutorProvider,
+    @inject(SqlQueryBuildableQueryCompilerSymbol) compiler: IBuildableQueryCompiler,
   ) {
     super(SomeModel, executorProvider, compiler);
   }
@@ -173,20 +182,19 @@ Sample usage
 
 ```ts
 import {Container} from "inversify";
-import {UnitOfWork} from "@ts-awesome/entity";
-import {IBuildableQueryCompiler, IQueryExecutor, IQueryExecutorProvider} from "@ts-awesome/orm";
-import {IUnitOfWork} from "./interfaces";
+import {UnitOfWork, IUnitOfWork, UnitOfWorkSymbol} from "@ts-awesome/entity";
+import {IBuildableQueryCompiler, IQueryExecutor, IQueryExecutorProvider, SqlQueryExecutorProviderSymbol} from "@ts-awesome/orm";
 
 const driver: IQueryExecutor; // specific to orm driver
 const container: Container;
 
 container
-  .rebind<IUnitOfWork>(Symbol.for('IUnitOfWork'))
+  .bind<IUnitOfWork>(UnitOfWorkSymbol)
   .toDynamicValue(({context}) => new UnitOfWork(driver));
 
 container
-  .rebind<IQueryExecutorProvider>(Symbol.for('IQueryExecutorProvider'))
-  .toDynamicValue(({context}) => context.get<IUnitOfWork>(Symbol.for('IUnitOfWork')));
+  .rebind<IQueryExecutorProvider>(SqlQueryExecutorProviderSymbol)
+  .toDynamicValue(({context}) => context.get<IUnitOfWork>(UnitOfWorkSymbol));
 
 ```
 
@@ -194,7 +202,7 @@ Auto managed transaction
 
 ```ts 
 const entityService = container.get<SomeModelEntityServiceSymbol>();
-const uow = container.get<IUnitOfWork>(Symbol.for('IUnitOfWork'));
+const uow = container.get<IUnitOfWork>(UnitOfWorkSymbol);
 
 const result = await uow.auto(async () => {
   await entityService.updateOne({id: 1, authorId: null});
@@ -206,7 +214,7 @@ Manual managed transactions
 
 ```ts
 const entityService = container.get<SomeModelEntityServiceSymbol>();
-const uow = container.get<IUnitOfWork>(Symbol.for('IUnitOfWork'));
+const uow = container.get<IUnitOfWork>(UnitOfWorkSymbol);
 
 let result;
 await uow.begin();
