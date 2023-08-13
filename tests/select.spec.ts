@@ -72,14 +72,28 @@ describe('select', () => {
 
     expect(query).toStrictEqual({
       "_alias": null,
+      "_columns": [
+        {
+          "_column": {
+            "name": "id",
+            "table": "Model",
+          },
+        },
+        {
+          "_column": {
+            "name": "value",
+            "table": "Model",
+          },
+        },
+      ],
       "_distinct": false,
+      "_for": undefined,
       "_limit": 20,
       "_orderBy": [
         {
           "_column": {
             "name": "value",
             "table": "Model",
-            "wrapper": undefined,
           }
         }
       ],
@@ -92,7 +106,6 @@ describe('select', () => {
               "_column": {
                 "name": "id",
                 "table": "Model",
-                "wrapper": undefined,
               }
             },
             2
@@ -147,7 +160,6 @@ describe('select', () => {
           "_column": {
             "name": "id",
             "table": "Model",
-            "wrapper": undefined,
           }
         },
         {
@@ -168,6 +180,7 @@ describe('select', () => {
                         }
                       ],
                       "_distinct": false,
+                      "_for": undefined,
                       "_table": PersonAction[TableMetadataSymbol],
                       "_type": "SELECT",
                       "_where": [
@@ -179,7 +192,6 @@ describe('select', () => {
                                   "_column": {
                                     "name": "personId",
                                     "table": "actions",
-                                    "wrapper": undefined,
                                   }
                                 },
                                 {
@@ -197,7 +209,6 @@ describe('select', () => {
                                   "_column": {
                                     "name": "action",
                                     "table": "actions",
-                                    "wrapper": undefined,
                                   }
                                 },
                                 "a"
@@ -210,7 +221,6 @@ describe('select', () => {
                                   "_column": {
                                     "name": "created",
                                     "table": "actions",
-                                    "wrapper": undefined,
                                   }
                                 },
                                 ts
@@ -233,6 +243,7 @@ describe('select', () => {
         }
       ],
       "_distinct": false,
+      "_for": undefined,
       "_limit": 20,
       "_orderBy": [
         {

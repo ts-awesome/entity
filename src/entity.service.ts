@@ -4,12 +4,12 @@ import {IActiveSelect, IEntityService, Insertable, IQueryExecutorProvider, Updat
 import {
   count,
   Delete,
-  IBuildableQuery,
+  IBuildableSelectQuery,
   IBuildableQueryCompiler,
   Insert,
   ISelectBuilder,
   ITableInfo,
-  Select,
+  Select, SelectForOperation,
   TableMetaProvider,
   Update,
   Upsert,
@@ -26,7 +26,7 @@ function cloneWithNonEnumerable<T>(x: T): T {
   return c;
 }
 
-function fix<T>(x: T): T {
+function fix<T extends {}>(x: T): T {
   for (const prop of Object.keys(x)) {
     if (typeof x[prop] === 'function') {
       Object.defineProperty(x, prop, {
@@ -70,7 +70,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const values = this.getValuesForInsert(_);
     const insert = Insert(this.Model).values(values);
     const query = this.compiler.compile(insert);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result;
   }
 
@@ -80,7 +80,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
 
     const upsert = Upsert(this.Model).values(values).where(this.getValuesForWhere(pk) as never).conflict(uniqueIndex);
     const query = this.compiler.compile(upsert);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result;
   }
 
@@ -89,7 +89,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const pk = this.getPk(_);
     const update = Update(this.Model).values(values).where(this.getValuesForWhere(pk) as never);
     const query = this.compiler.compile(update);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result ?? null;
   }
 
@@ -99,14 +99,14 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(this.getValuesForWhere(condition as never) as never);
     const query = this.compiler.compile(update);
-    return await this.executor.getExecutor().execute(query, this.Model);
+    return await this.executor.getExecutor().execute(query as never, this.Model);
   }
 
   public async deleteOne(_: Pick<T, pk>): Promise<T | null> {
     const pk = this.getPk(_);
     const del = Delete(this.Model).where(this.getValuesForWhere(pk) as never); // no need for limit, as PG doesn't support it
     const query = this.compiler.compile(del);
-    const [result] = await this.executor.getExecutor().execute(query, this.Model);
+    const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result ?? null;
   }
 
@@ -115,7 +115,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
   public async delete(_: unknown, limit?: number): Promise<ReadonlyArray<T>> {
     const del = Delete(this.Model).where(this.getValuesForWhere(_ as never) as never).limit(limit as any);
     const query = this.compiler.compile(del);
-    return await this.executor.getExecutor().execute(query, this.Model);
+    return await this.executor.getExecutor().execute(query as never, this.Model);
   }
 
   get(_: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
@@ -143,20 +143,22 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
 
   public select(): IActiveSelect<T> & ISelectBuilder<T>;
   public select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
-  public select(distinct = false): IActiveSelect<T> & ISelectBuilder<T> {
-    const original = Select(this.Model, distinct);
-    const activeSelect: IActiveSelect<T> & ISelectBuilder<T> & IBuildableQuery = fix({
-      // this is hack :-)
-      ...cloneWithNonEnumerable(original),
-      where: (_: Partial<T> | WhereBuilder<T>) => original.where.call(activeSelect, this.getValuesForWhere(_) as never),
-      fetch: (Model?) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect), Model ?? this.Model),
+  public select(forOp: SelectForOperation): IActiveSelect<T> & ISelectBuilder<T>;
+  public select(forOp: SelectForOperation, distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
+  public select(...args: any[]): IActiveSelect<T> & ISelectBuilder<T> {
+    const original = Select(this.Model, ...(args as []));
+    const activeSelect: IActiveSelect<T> & ISelectBuilder<T> & IBuildableSelectQuery = fix({
+      fetch: (Model?) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, Model ?? this.Model),
       fetchOne: async (Model?) => {
         const [result] = await activeSelect.limit(1).fetch(Model);
         return result ?? null;
       },
-      fetchScalar: () => this.executor.getExecutor().execute(this.compiler.compile(activeSelect), true),
+      fetchScalar: () => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, true),
       count: () => activeSelect.columns(() => [count()]).limit(1).fetchScalar(),
-      exists: async () => (await activeSelect.count()) > 0
+      exists: async () => (await activeSelect.count()) > 0,
+      // this is hack :-)
+      ...(cloneWithNonEnumerable(original) as any),
+      where: (_: Partial<T> | WhereBuilder<T>) => original.where.call(activeSelect, this.getValuesForWhere(_) as never) as any,
     });
 
     return activeSelect;

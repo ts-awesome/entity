@@ -4,7 +4,7 @@ import {
   WhereBuilder,
   IQueryExecutor,
   IsolationLevel,
-  IQueryData
+  IQueryData, SelectForOperation
 } from '@ts-awesome/orm';
 
 export interface IActiveSelect<T> {
@@ -58,6 +58,8 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T, optio
 
   select(): IActiveSelect<T> & ISelectBuilder<T>;
   select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
+  select(forOr: SelectForOperation): IActiveSelect<T> & ISelectBuilder<T>;
+  select(forOr: SelectForOperation, distinct: true): IActiveSelect<T> & ISelectBuilder<T>;
 }
 
 export interface IQueryExecutorProvider<TQuery, R = IQueryData> {
