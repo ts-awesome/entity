@@ -70,6 +70,7 @@ export type Action<T> = () => T | Promise<T>;
 
 export interface IUnitOfWork<TQuery, R = IQueryData, IL = IsolationLevel> extends IQueryExecutorProvider<TQuery, R> {
   auto<TData>(action: Action<TData>): Promise<TData>;
+  auto<TData>(isolationLevel: IL, action: Action<TData>): Promise<TData>;
   begin(): Promise<void>;
   commit(): Promise<void>;
   rollback(): Promise<void>;

@@ -9,18 +9,26 @@ import {
   Insert,
   ISelectBuilder,
   ITableInfo,
-  Select, SelectForOperation,
+  Select,
+  SelectForOperation,
   TableMetaProvider,
   Update,
   Upsert,
-  WhereBuilder,
+  WhereBuilder, IBuildableSubSelectQuery, TableMetadataSymbol,
 } from '@ts-awesome/orm';
 import {readModelMeta} from "@ts-awesome/orm/dist/builder";
 
-function cloneWithNonEnumerable<T>(x: T): T {
+function cloneWithNonEnumerable<T extends object>(x: T): T {
   const c: T = {} as never;
   for(const key of Object.getOwnPropertyNames(x)) {
     c[key] = x[key];
+  }
+
+  if (x[TableMetadataSymbol] != null) {
+    Object.defineProperty(c, TableMetadataSymbol, {
+      enumerable: false,
+      value: x[TableMetadataSymbol]
+    })
   }
 
   return c;
@@ -154,12 +162,24 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
         return result ?? null;
       },
       fetchScalar: () => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, true),
-      count: () => activeSelect.columns(() => [count()]).limit(1).fetchScalar(),
+      count: () => {
+        let query: IBuildableSubSelectQuery & ISelectBuilder<unknown> = activeSelect;
+        if (activeSelect._operators?.length > 0) {
+          query = Select(activeSelect);
+        }
+        const statement = this.compiler.compile(query.columns(() => [count()]).limit(1));
+        return this.executor.getExecutor().execute(statement, true);
+      },
       exists: async () => (await activeSelect.count()) > 0,
       // this is hack :-)
       ...(cloneWithNonEnumerable(original) as any),
       where: (_: Partial<T> | WhereBuilder<T>) => original.where.call(activeSelect, this.getValuesForWhere(_) as never) as any,
     });
+
+    Object.defineProperty(activeSelect, TableMetadataSymbol, {
+      enumerable: false,
+      value: original[TableMetadataSymbol],
+    })
 
     return activeSelect;
   }

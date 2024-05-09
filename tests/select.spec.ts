@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {EntityService, UnitOfWork, IEntityService} from '../dist';
-import {TestCompiler, TestDriver} from '@ts-awesome/orm/dist/test-driver';
+import {CompiledTestQuery, TestCompiler, TestDriver} from '@ts-awesome/orm/dist/test-driver';
 import {alias, and, count, dbField, dbTable, desc, of, Select, TableMetadataSymbol} from '@ts-awesome/orm';
 
 @dbTable('Model')
@@ -256,5 +256,78 @@ describe('select', () => {
       "_table": Model[TableMetadataSymbol],
       "_type": "SELECT"
     });
+  })
+
+  it('count should work on unions', async () => {
+
+    let query;
+    driver.mapper = ({raw,}) => {
+      query = raw;
+      return [{count: 1}];
+    }
+
+    const result = await service
+      .select()
+      .union(Select(Model))
+      .count()
+
+    expect(query).toStrictEqual({
+      "_type": "SELECT",
+      "_alias": "Model_SUBQUERY",
+      "_columns": [{
+        "_func": "COUNT",
+        "_args": ["*"],
+      }],
+      "_distinct": false,
+      "_for": undefined,
+      "_limit": 1,
+      "_table": {
+        "tableName": "Model_SUBQUERY",
+        "_alias": null,
+        "_columns": [
+          { "_column": { "name": "id", "table": "Model" } },
+          { "_column": { "name": "value", "table": "Model" } },
+        ],
+        "_distinct": false,
+        "_for": undefined,
+        "_operators": [
+          {
+            "_operator": "UNION",
+            "_distinct": false,
+            "_operand": {
+              "_alias": null,
+              "_columns": [
+                { "_column": { "name": "id", "table": "Model" } },
+                { "_column": { "name": "value", "table": "Model" } },
+              ],
+              "_distinct": false,
+              "_for": undefined,
+              "_table": Model[TableMetadataSymbol],
+              "_type": "SELECT",
+            }
+          }
+        ],
+        "_table": Model[TableMetadataSymbol],
+        "_type": "SELECT",
+        "fields": query._table.fields
+      }
+    })
+  })
+
+  it('test driver', async () => {
+
+    let query: CompiledTestQuery;
+    driver.mapper = (q) => {
+      query = q;
+      return [];
+    }
+
+    const result = await service
+      .select()
+      .union(Select(Model))
+      .fetch()
+
+    expect(query.tableName).toBe('Model')
+    expect(query.joins).toStrictEqual([])
   })
 });
