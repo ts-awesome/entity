@@ -4,7 +4,9 @@ import {
   WhereBuilder,
   IQueryExecutor,
   IsolationLevel,
-  IQueryData, SelectForOperation
+  IQueryData,
+  SelectForOperation,
+  Values,
 } from '@ts-awesome/orm';
 
 export interface IActiveSelect<T> {
@@ -39,22 +41,26 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T, optio
   addOne(_: Insertable<T, ro, optional>): Promise<T>;
   upsertOne(_: Insertable<T, ro, optional>, uniqueIndex?: string): Promise<T>;
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
   updateOne(_: Updatable<T, pk, ro>): Promise<T | null>;
   deleteOne(_: Pick<T, pk>): Promise<T | null>;
   getOne(builder: WhereBuilder<T>): Promise<T | null>;
-  getOne(values: Partial<T>): Promise<T | null>;
+  getOne(forOp: SelectForOperation, builder: WhereBuilder<T>): Promise<T | null>;
+  getOne(values: Values<T>): Promise<T | null>;
+  getOne(forOp: SelectForOperation, Values: Partial<T>): Promise<T | null>;
   get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
-  get(values: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(forOp: SelectForOperation, builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(values: Values<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(forOp: SelectForOperation, values: Values<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
 
   delete(builder: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
-  delete(values: Partial<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  delete(values: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
 
   count(builder: WhereBuilder<T>): Promise<number>;
-  count(values: Partial<T>): Promise<number>;
+  count(values: Values<T>): Promise<number>;
 
   exists(builder: WhereBuilder<T>): Promise<boolean>;
-  exists(values: Partial<T>): Promise<boolean>;
+  exists(values: Values<T>): Promise<boolean>;
 
   select(): IActiveSelect<T> & ISelectBuilder<T>;
   select(distinct: true): IActiveSelect<T> & ISelectBuilder<T>;

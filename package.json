@@ -3,7 +3,7 @@
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
-    "@ts-awesome/orm": "^1.5.11",
+    "@ts-awesome/orm": "^1.6.0-rc1",
     "@types/jest": "^29.5.1",
     "@types/inversify": "^2.0.33",
     "@types/reflect-metadata": "^0.1.0",
@@ -16,7 +16,7 @@
     "typescript": "^4.9.5"
   },
   "peerDependencies": {
-    "@ts-awesome/orm": "^1.5.11",
+    "@ts-awesome/orm": "^1.6.0-rc1",
     "inversify": "^5.0.0 || ^6.0.0"
   },
   "name": "@ts-awesome/entity",

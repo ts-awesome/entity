@@ -250,6 +250,7 @@ describe('select', () => {
           "_column": {
             "name": "score"
           },
+          "_nulls": undefined,
           "_order": "DESC"
         }
       ],

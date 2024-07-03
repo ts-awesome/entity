@@ -14,7 +14,10 @@ import {
   TableMetaProvider,
   Update,
   Upsert,
-  WhereBuilder, IBuildableSubSelectQuery, TableMetadataSymbol,
+  WhereBuilder,
+  IBuildableSubSelectQuery,
+  TableMetadataSymbol,
+  Values,
 } from '@ts-awesome/orm';
 import {readModelMeta} from "@ts-awesome/orm/dist/builder";
 
@@ -102,7 +105,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
   }
 
   update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Partial<T>): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
   public async update(_: Partial<Omit<T, pk | ro>>, condition: unknown): Promise<ReadonlyArray<T>> {
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model).values(values).where(this.getValuesForWhere(condition as never) as never);
@@ -118,7 +121,7 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     return result ?? null;
   }
 
-  delete(_: Partial<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  delete(_: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
   delete(_: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
   public async delete(_: unknown, limit?: number): Promise<ReadonlyArray<T>> {
     const del = Delete(this.Model).where(this.getValuesForWhere(_ as never) as never).limit(limit as any);
@@ -126,24 +129,36 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     return await this.executor.getExecutor().execute(query as never, this.Model);
   }
 
-  get(_: Partial<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(_: Values<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  get(forOp: SelectForOperation, _: Values<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
   get(_: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
-  public async get(_: unknown, limit?: number, offset?: number): Promise<ReadonlyArray<T>> {
-    return this.select().where(_ as never).limit(limit as any).offset(offset as any).fetch();
+  get(forOp: SelectForOperation, _: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
+  public async get(...args: unknown[]): Promise<ReadonlyArray<T>> {
+    const select = typeof args[0] === 'string'
+      ? this.select(args.shift() as SelectForOperation)
+      : this.select();
+    const [_, limit, offset] = args;
+    return select.where(_ as never).limit(limit as any).offset(offset as any).fetch();
   }
 
-  getOne(_: Partial<T>): Promise<T | null>;
+  getOne(_: Values<T>): Promise<T | null>;
+  getOne(forOp: SelectForOperation, _: Values<T>): Promise<T | null>;
   getOne(_: WhereBuilder<T>): Promise<T | null>;
-  public async getOne(_: unknown): Promise<T | null> {
-    return this.select().where(_ as never).fetchOne();
+  getOne(forOp: SelectForOperation, _: WhereBuilder<T>): Promise<T | null>;
+  public async getOne(...args: unknown[]): Promise<T | null> {
+    const select = typeof args[0] === 'string'
+      ? this.select(args.shift() as SelectForOperation)
+      : this.select();
+    const [_] = args;
+    return select.where(_ as never).fetchOne();
   }
 
-  count(_: Partial<T>): Promise<number>;
+  count(_: Values<T>): Promise<number>;
   count(_: WhereBuilder<T>): Promise<number>
   public async count(_: unknown): Promise<number> {
     return this.select().where(_ as never).count();
   }
-  exists(_: Partial<T>): Promise<boolean>;
+  exists(_: Values<T>): Promise<boolean>;
   exists(_: WhereBuilder<T>): Promise<boolean>;
   public async exists(_: unknown): Promise<boolean> {
     return this.select().where(_ as never).exists();
