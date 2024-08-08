@@ -94,8 +94,8 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const upsert = Upsert(this.Model)
       .values(values)
       .where(this.getValuesForWhere(pk) as never)
-      .conflict(uniqueIndex)
-      .limit(1);
+      .conflict(uniqueIndex);
+      //.limit(1); - no need for limit, as PG doesn't support it
     const query = this.compiler.compile(upsert);
     const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result;
@@ -106,21 +106,21 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const pk = this.getPk(_);
     const update = Update(this.Model)
       .values(values)
-      .where(this.getValuesForWhere(pk) as never)
-      .limit(1);
+      .where(this.getValuesForWhere(pk) as never);
+      //.limit(1); - no need for limit, as PG doesn't support it
     const query = this.compiler.compile(update);
     const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result ?? null;
   }
 
-  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
-  public async update(_: Partial<Omit<T, pk | ro>>, condition: unknown, limit?: number): Promise<ReadonlyArray<T>> {
+  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
+  public async update(_: Partial<Omit<T, pk | ro>>, condition: unknown): Promise<ReadonlyArray<T>> {
     const values = this.getValuesForUpdate(_);
     const update = Update(this.Model)
       .values(values)
-      .where(this.getValuesForWhere(condition as never) as never)
-      .limit(limit as any);
+      .where(this.getValuesForWhere(condition as never) as never);
+      //.limit(1); - no need for limit, as PG doesn't support it
     const query = this.compiler.compile(update);
     return await this.executor.getExecutor().execute(query as never, this.Model);
   }
@@ -135,12 +135,12 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     return result ?? null;
   }
 
-  delete(_: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
-  delete(_: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
-  public async delete(_: unknown, limit?: number): Promise<ReadonlyArray<T>> {
+  delete(_: Values<T>): Promise<ReadonlyArray<T>>;
+  delete(_: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
+  public async delete(_: unknown): Promise<ReadonlyArray<T>> {
     const del = Delete(this.Model)
-      .where(this.getValuesForWhere(_ as never) as never)
-      .limit(limit as any);
+      .where(this.getValuesForWhere(_ as never) as never);
+      //.limit(1); - no need for limit, as PG doesn't support it
     const query = this.compiler.compile(del);
     return await this.executor.getExecutor().execute(query as never, this.Model);
   }

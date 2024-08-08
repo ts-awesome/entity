@@ -51,7 +51,7 @@ describe('update', () => {
           value: 'test',
           tags: {_operator: 'CAST', _operands: [[], 'text[]']}
         });
-        expect(query.raw._limit).toBe(1)
+        expect(query.raw._limit).toBe(undefined)
         expect(query.raw._where).toStrictEqual([
           {
             _operator: 'AND',
