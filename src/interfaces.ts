@@ -14,6 +14,7 @@ export interface IActiveSelect<T> {
   fetch<X extends TableMetaProvider, R=InstanceType<X>>(Model: X): Promise<ReadonlyArray<R>>;
   count(): Promise<number>;
   fetchOne(): Promise<T | null>;
+  fetchOne(sensitive: true): Promise<T | null>;
   fetchOne<X extends TableMetaProvider, R=InstanceType<X>>(Model: X): Promise<R | null>;
   exists(): Promise<boolean>;
   fetchScalar(): Promise<number>;
@@ -23,13 +24,13 @@ export interface IActiveSelect<T> {
  * exclude - exclude fields, eg readonly or auto primary key
  * optional - optional field, eg ones with default values
  */
-export type Insertable<T, exclude extends keyof T = never, optional extends keyof T = never> = Omit<T, exclude | optional> & Partial<Pick<T, optional>>;
+export type Insertable<T, exclude extends keyof T = never, optional extends keyof T = never> = Required<Values<Omit<T, exclude | optional>>> & Values<Pick<T, optional>>;
 
 /**
  * pk - primary key
  * exclude - exclude fields, eg readonly or auto primary key
  */
-export type Updatable<T, pk extends keyof T, exclude extends keyof T = never> = Pick<T, pk> & Partial<Omit<T, pk | exclude>>;
+export type Updatable<T, pk extends keyof T, exclude extends keyof T = never> = Pick<T, pk> & Values<Omit<T, pk | exclude>>;
 
 /**
  * pk - primary key
@@ -40,14 +41,14 @@ export interface IEntityService<T, pk extends keyof T, ro extends keyof T, optio
   add(list: Insertable<T, ro, optional>[]): Promise<ReadonlyArray<T>>;
   addOne(_: Insertable<T, ro, optional>): Promise<T>;
   upsertOne(_: Insertable<T, ro, optional>, uniqueIndex?: string): Promise<T>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
+  update(_: Values<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
+  update(_: Values<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
   updateOne(_: Updatable<T, pk, ro>): Promise<T | null>;
   deleteOne(_: Pick<T, pk>): Promise<T | null>;
-  getOne(builder: WhereBuilder<T>): Promise<T | null>;
-  getOne(forOp: SelectForOperation, builder: WhereBuilder<T>): Promise<T | null>;
-  getOne(values: Values<T>): Promise<T | null>;
-  getOne(forOp: SelectForOperation, Values: Partial<T>): Promise<T | null>;
+  getOne(builder: WhereBuilder<T>, sensitive?: true): Promise<T | null>;
+  getOne(forOp: SelectForOperation, builder: WhereBuilder<T>, sensitive?: true): Promise<T | null>;
+  getOne(values: Values<T>, sensitive?: true): Promise<T | null>;
+  getOne(forOp: SelectForOperation, Values: Partial<T>, sensitive?: true): Promise<T | null>;
   get(builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
   get(forOp: SelectForOperation, builder: WhereBuilder<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;
   get(values: Values<T>, limit?: number, offset?: number): Promise<ReadonlyArray<T>>;

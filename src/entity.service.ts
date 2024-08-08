@@ -54,6 +54,8 @@ function isWhereBuilder<T>(_: unknown): _ is WhereBuilder<T> {
   return typeof _ === 'function';
 }
 
+type Class = new (...args: unknown[]) => unknown
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 @injectable()
@@ -89,7 +91,11 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     const values = this.getValuesForInsert(_);
     const pk = this.getPk(_);
 
-    const upsert = Upsert(this.Model).values(values).where(this.getValuesForWhere(pk) as never).conflict(uniqueIndex);
+    const upsert = Upsert(this.Model)
+      .values(values)
+      .where(this.getValuesForWhere(pk) as never)
+      .conflict(uniqueIndex)
+      .limit(1);
     const query = this.compiler.compile(upsert);
     const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result;
@@ -98,24 +104,32 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
   public async updateOne(_: Updatable<T, pk, ro>): Promise<T | null> {
     const values = this.getValuesForUpdate(_);
     const pk = this.getPk(_);
-    const update = Update(this.Model).values(values).where(this.getValuesForWhere(pk) as never);
+    const update = Update(this.Model)
+      .values(values)
+      .where(this.getValuesForWhere(pk) as never)
+      .limit(1);
     const query = this.compiler.compile(update);
     const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result ?? null;
   }
 
-  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>): Promise<ReadonlyArray<T>>;
-  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>): Promise<ReadonlyArray<T>>;
-  public async update(_: Partial<Omit<T, pk | ro>>, condition: unknown): Promise<ReadonlyArray<T>> {
+  update(_: Partial<Omit<T, pk | ro>>, condition: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  update(_: Partial<Omit<T, pk | ro>>, condition: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
+  public async update(_: Partial<Omit<T, pk | ro>>, condition: unknown, limit?: number): Promise<ReadonlyArray<T>> {
     const values = this.getValuesForUpdate(_);
-    const update = Update(this.Model).values(values).where(this.getValuesForWhere(condition as never) as never);
+    const update = Update(this.Model)
+      .values(values)
+      .where(this.getValuesForWhere(condition as never) as never)
+      .limit(limit as any);
     const query = this.compiler.compile(update);
     return await this.executor.getExecutor().execute(query as never, this.Model);
   }
 
   public async deleteOne(_: Pick<T, pk>): Promise<T | null> {
     const pk = this.getPk(_);
-    const del = Delete(this.Model).where(this.getValuesForWhere(pk) as never); // no need for limit, as PG doesn't support it
+    const del = Delete(this.Model)
+      .where(this.getValuesForWhere(pk) as never);
+      //.limit(1); - no need for limit, as PG doesn't support it
     const query = this.compiler.compile(del);
     const [result] = await this.executor.getExecutor().execute(query as never, this.Model);
     return result ?? null;
@@ -124,7 +138,9 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
   delete(_: Values<T>, limit?: number): Promise<ReadonlyArray<T>>;
   delete(_: WhereBuilder<T>, limit?: number): Promise<ReadonlyArray<T>>;
   public async delete(_: unknown, limit?: number): Promise<ReadonlyArray<T>> {
-    const del = Delete(this.Model).where(this.getValuesForWhere(_ as never) as never).limit(limit as any);
+    const del = Delete(this.Model)
+      .where(this.getValuesForWhere(_ as never) as never)
+      .limit(limit as any);
     const query = this.compiler.compile(del);
     return await this.executor.getExecutor().execute(query as never, this.Model);
   }
@@ -141,16 +157,16 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
     return select.where(_ as never).limit(limit as any).offset(offset as any).fetch();
   }
 
-  getOne(_: Values<T>): Promise<T | null>;
-  getOne(forOp: SelectForOperation, _: Values<T>): Promise<T | null>;
-  getOne(_: WhereBuilder<T>): Promise<T | null>;
-  getOne(forOp: SelectForOperation, _: WhereBuilder<T>): Promise<T | null>;
+  getOne(_: Values<T>, sensitive?: true): Promise<T | null>;
+  getOne(forOp: SelectForOperation, _: Values<T>, sensitive?: true): Promise<T | null>;
+  getOne(_: WhereBuilder<T>, sensitive?: true): Promise<T | null>;
+  getOne(forOp: SelectForOperation, _: WhereBuilder<T>, sensitive?: true): Promise<T | null>;
   public async getOne(...args: unknown[]): Promise<T | null> {
     const select = typeof args[0] === 'string'
       ? this.select(args.shift() as SelectForOperation)
       : this.select();
-    const [_] = args;
-    return select.where(_ as never).fetchOne();
+    const [_, sensitive = false] = args;
+    return select.where(_ as never).fetchOne(sensitive as true);
   }
 
   count(_: Values<T>): Promise<number>;
@@ -171,9 +187,9 @@ export class EntityService<T, pk extends keyof T, ro extends keyof T, optional e
   public select(...args: any[]): IActiveSelect<T> & ISelectBuilder<T> {
     const original = Select(this.Model, ...(args as []));
     const activeSelect: IActiveSelect<T> & ISelectBuilder<T> & IBuildableSelectQuery = fix({
-      fetch: (Model?) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, Model ?? this.Model),
-      fetchOne: async (Model?) => {
-        const [result] = await activeSelect.limit(1).fetch(Model);
+      fetch: (Model?: Class | true) => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, (typeof Model === 'boolean' ? null : Model) ?? this.Model, Model === true),
+      fetchOne: async (Model?: Class | true) => {
+        const [result] = await activeSelect.limit(1).fetch(Model as never);
         return result ?? null;
       },
       fetchScalar: () => this.executor.getExecutor().execute(this.compiler.compile(activeSelect) as never, true),
